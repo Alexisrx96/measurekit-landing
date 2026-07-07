@@ -1,5 +1,6 @@
 ---
 import DocsLayout from "../layouts/DocsLayout.astro";
+import docstrings from "../data/api-docstrings.json";
 
 const api = [
   {
@@ -87,6 +88,7 @@ const grammarApi = [
       <li><a href="#module-functions">Module functions</a></li>
       <li><a href="#grammar-api">Grammar API</a></li>
       <li><a href="#exceptions">Exceptions</a></li>
+      <li><a href="#extracted-api">Extracted API</a></li>
       <li><a href="#units-module">Units module</a></li>
     </ul>
   </div>
@@ -309,6 +311,38 @@ try:
     Q_(10, "m") + Q_(5, "s")  # incompatible add
 except IncompatibleUnitsError as e:
     print(f"Incompatible units: &#123;e&#125;")</code></pre>
+
+  <!-- Extracted API -->
+  <h2 id="extracted-api">Quantity API (Auto-generated from Source)</h2>
+  <p>This reference is parsed dynamically from the <code>Quantity</code> class source code, showcasing all properties and methods available in the current release.</p>
+  
+  <div class="api-card">
+    <h3>Properties</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Description</th></tr></thead>
+      <tbody>
+        {docstrings.classes.Quantity.properties.filter(p => !p.name.startsWith('_')).map(prop => (
+          <tr>
+            <td><code>.{prop.name}</code></td>
+            <td>{prop.docstring || "No docstring provided."}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <h3>Methods</h3>
+    <table>
+      <thead><tr><th>Signature</th><th>Description</th></tr></thead>
+      <tbody>
+        {docstrings.classes.Quantity.methods.map(method => (
+          <tr>
+            <td><code>.{method.signature}</code></td>
+            <td>{method.docstring || "No docstring provided."}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 
   <!-- Units module -->
   <h2 id="units-module">Units module</h2>

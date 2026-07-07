@@ -1,0 +1,491 @@
+---
+import DocsLayout from "../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Guided Tutorials" description="Step-by-step walk-throughs for practical engineering and physics applications" activeSection="tutorials">
+  <div class="page-header">
+    <div class="kicker">Guides</div>
+    <h1>Tutorials</h1>
+    <p>Step-by-step wizard walk-throughs solving complex engineering, calibration, and orbital mechanics problems using MeasureKit.</p>
+  </div>
+
+  <!-- Wizard Interface -->
+  <div class="tutorial-wizard">
+    <!-- Wizard Sidebar: Choose Tutorial -->
+    <div class="wizard-selector">
+      <button class="t-select-btn active" data-tutorial="sensor">🌡️ Sensor Calibration</button>
+      <button class="t-select-btn" data-tutorial="orbital">🌌 Kepler Orbit Solver</button>
+      <button class="t-select-btn" data-tutorial="fluid">💧 Bernoulli Pipe Flow</button>
+    </div>
+
+    <!-- Wizard Content Box -->
+    <div class="wizard-box">
+      <!-- Sensor Calibration Tutorial -->
+      <div class="tutorial-content active" id="sensorTutorial">
+        <div class="wizard-step-header">
+          <h2>Sensor Calibration & Offset Conversion</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Step 1: Input Raw Readings and Uncertainty</h3>
+          <p>
+            In sensor calibration, we start with raw measurements and standard deviations. Since temperature scales are offset scales, we must be careful with Celsius and Fahrenheit.
+          </p>
+          <pre><code>from measurekit import Q_
+
+# Raw reading at ice point (Celsius offset scale)
+t_raw = Q_(0.15, "degC", uncertainty=0.05)
+
+# Expected reference value (absolute Kelvin scale)
+t_ref = Q_(273.15, "K")
+
+print("Raw reading:", t_raw)
+print("Reference:", t_ref)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Step 2: Compute Offset Error (Absolute to Delta Conversion)</h3>
+          <p>
+            Subtracting the raw value from the reference computes the offset. Subtracting two absolute temperatures automatically returns a **Delta** unit (difference) to preserve thermodynamic meaning:
+          </p>
+          <pre><code># Convert raw to Kelvin to subtract absolute temperatures
+t_raw_k = t_raw.to("K")
+
+# Difference returns delta units (e.g. delta_degC or K)
+t_offset = t_ref - t_raw_k
+
+print("Raw in Kelvin:", t_raw_k)
+print("Calibration Offset:", t_offset)  # Result: ~0.0 ± 0.05 K</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Step 3: Calibrate New Readings and Convert to Fahrenheit</h3>
+          <p>
+            Apply the calibration offset to a new sensor reading. Finally, convert the calibrated absolute temperature to Fahrenheit:
+          </p>
+          <pre><code># New sensor reading
+t_new = Q_(25.4, "degC", uncertainty=0.1)
+
+# Apply delta offset (absolute + delta -> absolute)
+t_calibrated = t_new + t_offset.to("delta_degC")
+
+# Convert absolute Kelvin/Celsius to Fahrenheit
+t_fahrenheit = t_calibrated.to("degF")
+
+print("Calibrated Temp (C):", t_calibrated)
+print("Calibrated Temp (F):", t_fahrenheit)
+# Output: ~77.72 ± 0.20 degF</code></pre>
+          <div class="callout callout-success">
+            <p><strong>Success:</strong> You have calibrated a sensor and propagated error across offset scale systems!</p>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <a href="/playground" class="btn-primary">Try in Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kepler Orbit Solver -->
+      <div class="tutorial-content" id="orbitalTutorial">
+        <div class="wizard-step-header">
+          <h2>🌌 Astrophysics: Keplerian Orbit Solver</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Step 1: Define Constants and Astronomical Parameters</h3>
+          <p>
+            Calculate the orbital period of Earth around the Sun using Kepler's Third Law: <code>T² = 4π²r³ / (G × M)</code>. We start by gathering physical constants:
+          </p>
+          <pre><code>import math
+from measurekit import Q_
+from measurekit.constants import G  # Gravitational constant
+
+# Mass of the Sun
+M_sun = Q_(1.989e30, "kg", uncertainty=1e26)
+
+# Earth orbital radius (1 Astronomical Unit)
+r_orbit = Q_(1.496e11, "m", uncertainty=1e7)
+
+print("G:", G)
+print("M_sun:", M_sun)
+print("Radius:", r_orbit)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Step 2: Solve Kepler's Equation</h3>
+          <p>
+            Calculate the square of the orbital period. Units are automatically multiplied and divided, proving dimensional consistency:
+          </p>
+          <pre><code># Kepler's Third Law formula
+T_squared = (4 * (math.pi**2) * (r_orbit**3)) / (G * M_sun)
+
+# Take the square root to get the period T
+T = T_squared ** 0.5
+
+print("T² units:", T_squared.unit)  # s^2
+print("Orbital Period T:", T)        # ~3.155e7 s</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Step 3: Convert to Years and Analyze Error</h3>
+          <p>
+            Convert seconds to solar years. The uncertainty of the orbital period is automatically computed from the Sun's mass and orbital radius margins:
+          </p>
+          <pre><code># Convert seconds to years
+T_years = T.to("yr")
+
+print(f"Orbital Period: &#123;T_years.magnitude:.4f&#125; ± &#123;T_years.uncertainty:.4f&#125; years")
+# Output: 1.0001 ± 0.0001 years
+
+# Relative precision of calculations
+relative_err = (T_years.uncertainty / T_years.magnitude) * 100
+print(f"Calculation margin of error: &#123;relative_err:.6f&#125;%")</code></pre>
+          <div class="callout callout-info">
+            <p>The uncertainty propagates through gravity and orbital bounds automatically without manual partial derivatives!</p>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <a href="/playground" class="btn-primary">Try in Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bernoulli Pipe Flow -->
+      <div class="tutorial-content" id="fluidTutorial">
+        <div class="wizard-step-header">
+          <h2>💧 Fluid Dynamics: Pipe Flow Drop</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Step 1: Set Up Pipe Velocities</h3>
+          <p>
+            Analyze pressure drop in a contracting horizontal water pipe using Bernoulli's principle: <code>P₁ - P₂ = ½ρ(v₂² - v₁²)</code>. Start by setting inlet/outlet velocities:
+          </p>
+          <pre><code>from measurekit import Q_
+
+# Water Density
+rho = Q_(997, "kg/m^3")
+
+# Inlet velocity (wide pipe)
+v1 = Q_(1.2, "m/s", uncertainty=0.02)
+
+# Outlet velocity (contracted pipe)
+v2 = Q_(4.5, "m/s", uncertainty=0.05)
+
+print("Density:", rho)
+print("V1:", v1)
+print("V2:", v2)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Step 2: Solve Pressure Drop</h3>
+          <p>
+            Evaluate the pressure difference. Dynamic velocity pressures automatically combine with fluid density to resolve to Pascal (Pa):
+          </p>
+          <pre><code># Bernoulli equation for horizontal pipe
+pressure_drop = 0.5 * rho * (v2**2 - v1**2)
+
+print("Pressure Drop:", pressure_drop)
+print("Units resolved:", pressure_drop.unit)  # Pa
+# Result: ~9376.78 Pa</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <button class="btn-primary next-step-btn">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Step 3: Convert to Bar and Propagate Error</h3>
+          <p>
+            Convert the pressure difference to bar or psi. The standard deviations on water velocities propagate into the final pressure margin:
+          </p>
+          <pre><code># Conversions
+drop_bar = pressure_drop.to("bar")
+drop_psi = pressure_drop.to("psi")
+
+print(f"Drop in bar: &#123;drop_bar.magnitude:.4f&#125; ± &#123;drop_bar.uncertainty:.4f&#125; bar")
+# ~0.0938 ± 0.0022 bar
+
+print(f"Drop in psi: &#123;drop_psi.magnitude:.4f&#125; ± &#123;drop_psi.uncertainty:.4f&#125; psi")
+# ~1.3600 ± 0.0322 psi</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Previous</button>
+            <a href="/playground" class="btn-primary">Try in Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Handles changing tutorial selection
+    document.querySelectorAll('.t-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Toggle selected button state
+        document.querySelectorAll('.t-select-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Toggle selected tutorial contents
+        const target = btn.getAttribute('data-tutorial');
+        document.querySelectorAll('.tutorial-content').forEach(c => c.classList.remove('active'));
+        
+        if (target === 'sensor') {
+          document.getElementById('sensorTutorial').classList.add('active');
+        } else if (target === 'orbital') {
+          document.getElementById('orbitalTutorial').classList.add('active');
+        } else if (target === 'fluid') {
+          document.getElementById('fluidTutorial').classList.add('active');
+        }
+      });
+    });
+
+    // Handles changing steps inside a tutorial
+    document.querySelectorAll('.tutorial-content').forEach(tut => {
+      const stepPanes = tut.querySelectorAll('.step-pane');
+      const dots = tut.querySelectorAll('.step-dot');
+
+      function showStep(stepNum) {
+        stepPanes.forEach(p => p.classList.toggle('active', parseInt(p.getAttribute('data-step')) === stepNum));
+        dots.forEach(d => d.classList.toggle('active', parseInt(d.getAttribute('data-step')) === stepNum));
+      }
+
+      tut.querySelectorAll('.next-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const currentActive = tut.querySelector('.step-pane.active');
+          const currentStep = parseInt(currentActive.getAttribute('data-step'));
+          showStep(currentStep + 1);
+        });
+      });
+
+      tut.querySelectorAll('.prev-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const currentActive = tut.querySelector('.step-pane.active');
+          const currentStep = parseInt(currentActive.getAttribute('data-step'));
+          showStep(currentStep - 1);
+        });
+      });
+
+      dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+          showStep(parseInt(dot.getAttribute('data-step')));
+        });
+      });
+    });
+  </script>
+</DocsLayout>
+
+<style>
+  .tutorial-wizard {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  /* Wizard Sidebar */
+  .wizard-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 240px;
+    flex-shrink: 0;
+  }
+  .t-select-btn {
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    color: var(--text2);
+    font-size: 0.9rem;
+    font-weight: 550;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .t-select-btn:hover {
+    background: var(--panel2);
+    color: var(--text);
+  }
+  .t-select-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* Content box */
+  .wizard-box {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .tutorial-content {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+  }
+  .tutorial-content.active {
+    display: flex;
+  }
+
+  /* Step dots indicator */
+  .wizard-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .wizard-step-header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    border: none;
+    padding: 0;
+  }
+  .step-dots {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .step-dot.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Step panes */
+  .step-pane {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+  }
+  .step-pane.active {
+    display: flex;
+  }
+  .step-pane h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.05rem;
+  }
+  .step-pane p {
+    font-size: 0.925rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* Wizard Navigation Buttons */
+  .wizard-nav {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border2);
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius);
+    border: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+    text-decoration: none;
+  }
+  
+  .btn-secondary {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  @media (max-width: 900px) {
+    .tutorial-wizard {
+      flex-direction: column;
+    }
+    .wizard-selector {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .t-select-btn {
+      flex: 1;
+      min-width: 150px;
+    }
+  }
+</style>

@@ -28,6 +28,8 @@ const navItems = [
   { label: isSpanish ? "Guía de Usuario" : "User Guide", href: `${langPrefix}/guide`, section: "guide", icon: "📖" },
   { label: isSpanish ? "Referencia API" : "API Reference", href: `${langPrefix}/api`, section: "api", icon: "🔧" },
   { label: isSpanish ? "Ejemplos" : "Examples", href: `${langPrefix}/examples`, section: "examples", icon: "🧪" },
+  { label: isSpanish ? "Tutoriales" : "Tutorials", href: `${langPrefix}/tutorials`, section: "tutorials", icon: "📚" },
+  { label: isSpanish ? "Playground" : "Playground", href: `${langPrefix}/playground`, section: "playground", icon: "🚀" },
   { label: isSpanish ? "CLI y REPL" : "CLI & REPL", href: `${langPrefix}/cli`, section: "cli", icon: "💻" },
   { label: isSpanish ? "Historial" : "Changelog", href: `${langPrefix}/changelog`, section: "changelog", icon: "📋" },
 ];
@@ -76,6 +78,10 @@ const t = {
           <span class="brand-name">MeasureKit</span>
           <span class="brand-badge">v0.1.8</span>
         </a>
+        <button class="search-trigger" id="searchTrigger" title={isSpanish ? "Buscar en la documentación" : "Search documentation"}>
+          <span>🔍 {isSpanish ? "Buscar..." : "Search..."}</span>
+          <kbd class="search-kbd">Ctrl K</kbd>
+        </button>
         <nav class="topbar-nav">
           <a href={otherLangPath} class="lang-switcher">
             {isSpanish ? "🌐 EN" : "🌐 ES"}
@@ -142,7 +148,23 @@ const t = {
       </main>
     </div>
 
-    <script>
+    <!-- Search Modal -->
+    <div class="search-modal-backdrop" id="searchModal" style="display: none;">
+      <div class="search-modal">
+        <div class="search-header">
+          <input type="text" id="searchInput" placeholder={isSpanish ? "Buscar en la documentación..." : "Search documentation..."} autocomplete="off" />
+          <button class="search-close" id="searchClose">✕</button>
+        </div>
+        <div class="search-results" id="searchResults"></div>
+        <div class="search-footer">
+          <span>↑↓ {isSpanish ? "Navegar" : "Navigate"}</span>
+          <span>↵ {isSpanish ? "Seleccionar" : "Select"}</span>
+          <span>esc {isSpanish ? "Cerrar" : "Close"}</span>
+        </div>
+      </div>
+    </div>
+
+    <script define:vars={{ isSpanish }}>
       // Mobile menu toggle
       const menuToggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
@@ -179,6 +201,151 @@ const t = {
             }, 2000);
           });
         });
+      });
+
+      // Search database
+      const searchIndex = [
+        // English
+        { title: "Overview / Home", url: "/", excerpt: "Intro to MeasureKit unit-aware physics calculations.", lang: "en" },
+        { title: "What is MeasureKit?", url: "/#what-is-measurekit", excerpt: "Under-the-hood differences with Pint.", lang: "en" },
+        { title: "Honest Performance", url: "/#honest-performance", excerpt: "Eager mode speed vs compiled graph optimization.", lang: "en" },
+        { title: "Installation", url: "/install", excerpt: "Install with pip or uv for base, native Rust or all backends.", lang: "en" },
+        { title: "Building from source", url: "/install#building-from-source", excerpt: "Compiling maturin Rust core from source.", lang: "en" },
+        { title: "Quick Start", url: "/quickstart", excerpt: "Create first quantity, convert, uncertainty propagation.", lang: "en" },
+        { title: "Grammar notation", url: "/quickstart#grammar-notation", excerpt: "MeasureNote syntax in Python interpreter.", lang: "en" },
+        { title: "Terminal calculator", url: "/quickstart#terminal-calculator", excerpt: "CLI options and interactive REPL.", lang: "en" },
+        { title: "User Guide", url: "/guide", excerpt: "Full guide covering physical quantities and unit singletons.", lang: "en" },
+        { title: "Absolute vs Delta Temperature", url: "/guide#arithmetic", excerpt: "Celsius and Fahrenheit offsets versus delta units.", lang: "en" },
+        { title: "Trigonometric & Transcendentals", url: "/guide#transcendentals", excerpt: "Dimensionless sine, exp, log, tanh on quantities.", lang: "en" },
+        { title: "Uncertainty Propagation", url: "/guide#uncertainty", excerpt: "Taylor series, Monte Carlo, and Unscented modes.", lang: "en" },
+        { title: "Correlated Covariance Store", url: "/guide#covariance", excerpt: "UUID lineages and sparse matrix propagation.", lang: "en" },
+        { title: "JAX Stateless Functional API", url: "/guide#functional", excerpt: "FunctionalState pytree tracking for JAX JIT.", lang: "en" },
+        { title: "JIT Tracing & Zero-Overhead", url: "/guide#jit", excerpt: "torch.compile dispatching and raw GPU kernels.", lang: "en" },
+        { title: "SymPy Symbolic Math", url: "/guide#symbolic", excerpt: "SymbolicQuantity, Equation solving, diff and integrate.", lang: "en" },
+        { title: "Pandas Accessor", url: "/guide#pandas", excerpt: "Series extension array and custom measurekit[unit] type.", lang: "en" },
+        { title: "Serialization (IO)", url: "/guide#io", excerpt: "HDF5 dataset attributes and xarray accessories.", lang: "en" },
+        { title: "API Reference", url: "/api", excerpt: "Quantity properties and methods lookup table.", lang: "en" },
+        { title: "Module functions", url: "/api#module-functions", excerpt: "system_context, propagation_mode, jit, save_state.", lang: "en" },
+        { title: "Exceptions", url: "/api#exceptions", excerpt: "IncompatibleUnitsError, UnknownUnitError, ConversionError.", lang: "en" },
+        { title: "Examples", url: "/examples", excerpt: "Kinematics, Force, Pressure, Temperature, Uncertainty, NumPy, SymPy, JIT.", lang: "en" },
+        { title: "CLI & REPL Details", url: "/cli", excerpt: "MeasureNote grammar statements and notes piping.", lang: "en" },
+        { title: "Changelog", url: "/changelog", excerpt: "Timeline release notes from v0.1.0 to v0.1.8.", lang: "en" },
+
+        // Spanish
+        { title: "Inicio", url: "/es/", excerpt: "Introducción a los cálculos físicos con unidades en Python.", lang: "es" },
+        { title: "Rendimiento Real", url: "/es/#honest-performance", excerpt: "Velocidad eager vs optimización con compilación de grafos.", lang: "es" },
+        { title: "Instalación", url: "/es/install", excerpt: "Instalación por pip, uv, extras native, numpy, torch, jax.", lang: "es" },
+        { title: "Compilar desde código fuente", url: "/es/install#building-from-source", excerpt: "Compilación de maturin Rust core desde repositorio.", lang: "es" },
+        { title: "Guía Rápida", url: "/es/quickstart", excerpt: "Uso básico de la factoría Q_, conversiones y REPL.", lang: "es" },
+        { title: "Calculadora de consola", url: "/es/quickstart#terminal-calculator", excerpt: "CLI de MeasureKit para evaluación directa.", lang: "es" },
+        { title: "Guía de Usuario", url: "/es/guide", excerpt: "Completa guía de arquitectura de MeasureKit.", lang: "es" },
+        { title: "Temperaturas Absolutas vs Delta", url: "/es/guide#arithmetic", excerpt: "Diferencia de temperatura en offsets Celsius/Fahrenheit.", lang: "es" },
+        { title: "Funciones Trascendentales", url: "/es/guide#transcendentals", excerpt: "Seno, coseno, exp, log en cantidades físicas.", lang: "es" },
+        { title: "Propagación de Incertidumbre", url: "/es/guide#uncertainty", excerpt: "Modos Monte Carlo y Transformada Unscented.", lang: "es" },
+        { title: "Matriz de Covarianza Global", url: "/es/guide#covariance", excerpt: "Almacén de covarianza y transformaciones afines.", lang: "es" },
+        { title: "JAX API Funcional sin Estado", url: "/es/guide#functional", excerpt: "Uso de FunctionalState como pytree para JAX JIT.", lang: "es" },
+        { title: "Compilación JIT y Trazado", url: "/es/guide#jit", excerpt: "Integración torch.compile y kernels nativos en GPU.", lang: "es" },
+        { title: "Matemática Simbólica SymPy", url: "/es/guide#symbolic", excerpt: "SymbolicQuantity, resolución de ecuaciones, derivadas e integrales.", lang: "es" },
+        { title: "Pandas e Integraciones", url: "/es/guide#pandas", excerpt: "Series extendidas y tipo measurekit[m/s].", lang: "es" },
+        { title: "Serialización (IO)", url: "/es/guide#io", excerpt: "Formatos HDF5 y accessor para DataArray de xarray.", lang: "es" },
+        { title: "Referencia API", url: "/es/api", excerpt: "Tabla de referencia de Quantity, propiedades y métodos.", lang: "es" },
+        { title: "Funciones de Módulo", url: "/es/api#module-functions", excerpt: "system_context, propagation_mode, jit, save_state.", lang: "es" },
+        { title: "Excepciones", url: "/es/api#exceptions", excerpt: "IncompatibleUnitsError, UnknownUnitError, ConversionError.", lang: "es" },
+        { title: "Ejemplos Prácticos", url: "/es/examples", excerpt: "Cinemática, Fuerza, Presión, Temperatura, Péndulo, NumPy, JIT.", lang: "es" },
+        { title: "CLI y REPL detalles", url: "/es/cli", excerpt: "Gramática MeasureNote y ejecución por tuberías.", lang: "es" },
+        { title: "Historial", url: "/es/changelog", excerpt: "Notas de lanzamiento de la versión v0.1.0 a la v0.1.8.", lang: "es" },
+      ];
+
+      const currentLang = isSpanish ? "es" : "en";
+      const searchModal = document.getElementById('searchModal');
+      const searchTrigger = document.getElementById('searchTrigger');
+      const searchClose = document.getElementById('searchClose');
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+
+      let activeIndex = -1;
+
+      function openSearch() {
+        searchModal.style.display = 'flex';
+        searchInput.focus();
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeSearch() {
+        searchModal.style.display = 'none';
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+        activeIndex = -1;
+        document.body.style.overflow = '';
+      }
+
+      searchTrigger?.addEventListener('click', openSearch);
+      searchClose?.addEventListener('click', closeSearch);
+
+      // Backdrop close
+      searchModal?.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
+          closeSearch();
+        }
+      });
+
+      // ESC key close & Ctrl+K open
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && searchModal.style.display === 'flex') {
+          closeSearch();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.preventDefault();
+          openSearch();
+        }
+      });
+
+      // Realtime search
+      searchInput?.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        if (!query) {
+          searchResults.innerHTML = '';
+          return;
+        }
+
+        const filtered = searchIndex
+          .filter(item => item.lang === currentLang)
+          .filter(item => item.title.toLowerCase().includes(query) || item.excerpt.toLowerCase().includes(query))
+          .slice(0, 8);
+
+        searchResults.innerHTML = filtered.map((item, idx) => `
+          <a href="${item.url}" class="search-result-item ${idx === 0 ? 'selected' : ''}">
+            <div class="result-title">${item.title}</div>
+            <div class="result-excerpt">${item.excerpt}</div>
+          </a>
+        `).join('');
+
+        activeIndex = filtered.length > 0 ? 0 : -1;
+      });
+
+      // Keyboard navigation in results
+      searchInput?.addEventListener('keydown', (e) => {
+        const items = searchResults.querySelectorAll('.search-result-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          items[activeIndex]?.classList.remove('selected');
+          activeIndex = (activeIndex + 1) % items.length;
+          items[activeIndex].classList.add('selected');
+          items[activeIndex].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          items[activeIndex]?.classList.remove('selected');
+          activeIndex = (activeIndex - 1 + items.length) % items.length;
+          items[activeIndex].classList.add('selected');
+          items[activeIndex].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (activeIndex >= 0 && items[activeIndex]) {
+            items[activeIndex].click();
+          }
+        }
       });
     </script>
   </body>
@@ -252,6 +419,144 @@ const t = {
     font-size: 0.7rem;
     font-weight: 500;
   }
+
+  /* ── Search Bar / Button ── */
+  .search-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 220px;
+    text-align: left;
+    margin-left: 1.5rem;
+  }
+  .search-trigger:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--panel2);
+  }
+  .search-kbd {
+    margin-left: auto;
+    font-family: inherit;
+    font-size: 0.7rem;
+    background: var(--border2);
+    border: 1px solid var(--border);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    color: var(--text3);
+  }
+
+  /* ── Search Modal ── */
+  .search-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 13, 19, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 15vh;
+  }
+  .search-modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    width: 100%;
+    max-width: 580px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: search-slide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes search-slide {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .search-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border2);
+    gap: 0.75rem;
+  }
+  .search-header input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.05rem;
+    outline: none;
+    font-family: inherit;
+  }
+  .search-header input::placeholder {
+    color: var(--text3);
+  }
+  .search-close {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0.25rem;
+    transition: color 0.15s;
+  }
+  .search-close:hover {
+    color: var(--text);
+  }
+  .search-results {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .search-result-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    text-decoration: none !important;
+    transition: background 0.15s;
+  }
+  .search-result-item:hover, .search-result-item.selected {
+    background: var(--panel2);
+    outline: none;
+  }
+  .result-title {
+    font-size: 0.925rem;
+    font-weight: 600;
+    color: var(--accent2);
+    margin-bottom: 0.15rem;
+  }
+  .search-result-item:hover .result-title, .search-result-item.selected .result-title {
+    color: var(--text);
+  }
+  .result-excerpt {
+    font-size: 0.8rem;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+  .search-footer {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    font-size: 0.75rem;
+    color: var(--text3);
+  }
+
   .topbar-nav {
     display: flex; align-items: center; gap: 1rem;
     margin-left: auto;
@@ -556,6 +861,14 @@ const t = {
   @media (max-width: 768px) {
     .menu-toggle { display: flex; align-items: center; }
     .topbar-nav { display: none; }
+    .search-trigger {
+      width: 100px;
+      margin-left: auto;
+      margin-right: 0.5rem;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+    }
+    .search-kbd { display: none; }
     .sidebar {
       transform: translateX(-100%);
       transition: transform 0.25s;

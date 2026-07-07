@@ -1,0 +1,485 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Playground Interactivo" description="Ejecuta MeasureKit directamente en tu navegador con WebAssembly" activeSection="playground">
+  <!-- Stylesheets for CodeMirror -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css" />
+
+  <div class="page-header">
+    <div class="kicker">Interactivo</div>
+    <h1>Playground</h1>
+    <p>Ejecuta código de Python con MeasureKit directamente en tu navegador. Desarrollado con Pyodide (Python compilado a WebAssembly).</p>
+  </div>
+
+  <!-- Loading State overlay -->
+  <div class="playground-loader" id="loader">
+    <div class="loader-spinner"></div>
+    <p id="loaderStatus">Inicializando Pyodide (Python WebAssembly)...</p>
+    <div class="loader-progress"><div class="loader-bar" id="loaderBar"></div></div>
+  </div>
+
+  <!-- Playground Workspace (Initially Hidden) -->
+  <div class="playground-workspace" id="workspace" style="display: none;">
+    <div class="workspace-header">
+      <div class="snippets">
+        <span class="snippet-label">Ejemplos:</span>
+        <button class="snippet-btn" data-snippet="basic">Aritmética Básica</button>
+        <button class="snippet-btn" data-snippet="uncertainty">Incertidumbre</button>
+        <button class="snippet-btn" data-snippet="numpy">Matriz NumPy</button>
+        <button class="snippet-btn" data-snippet="grammar">MeasureNote</button>
+      </div>
+      <button class="run-btn" id="runBtn">
+        <span class="run-icon">▶</span> Ejecutar (Ctrl+Enter)
+      </button>
+    </div>
+
+    <div class="workspace-panes">
+      <!-- Editor Pane -->
+      <div class="pane editor-pane">
+        <div class="pane-header">Editor (Python 3.11)</div>
+        <textarea id="editorCode">from measurekit import Q_
+
+# 1. Cálculos Físicos
+distancia = Q_(10, "km")
+tiempo = Q_(2.5, "hr")
+velocidad = distancia / tiempo
+
+print("La velocidad es:", velocidad)
+print("Velocidad en m/s:", velocidad.to("m/s"))
+
+# 2. Prevenir operaciones inválidas
+try:
+    distancia + tiempo
+except Exception as e:
+    print("\n❌ Se evitó la operación inválida:")
+    print(e)
+</textarea>
+      </div>
+
+      <!-- Console Pane -->
+      <div class="pane console-pane">
+        <div class="pane-header">
+          <span>Salida de Terminal</span>
+          <button class="clear-btn" id="clearConsole">Limpiar</button>
+        </div>
+        <pre class="console-output" id="consoleOutput">Cargando compilador de Python...</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pyodide Loader JS -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js" is:inline></script>
+  <!-- CodeMirror Editor JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js" is:inline></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js" is:inline></script>
+
+  <script is:inline>
+    // Snippets database
+    const snippets = {
+      basic: `from measurekit import Q_
+
+# Cálculo de velocidad, distancia y tiempo
+distancia = Q_(10, "km")
+tiempo = Q_(2.5, "hr")
+velocidad = distancia / tiempo
+
+print("Velocidad:", velocidad)
+print("Convertido a m/s:", velocidad.to("m/s"))
+print("Convertido a mph:", velocidad.to("mph"))
+`,
+      uncertainty: `from measurekit import Q_
+
+# Propagación de incertidumbre estándar (Series de Taylor)
+g = Q_(9.81, "m/s^2", uncertainty=0.02)
+m = Q_(70.0, "kg", uncertainty=1.5)
+
+# Fuerza F = m * g
+F = m * g
+print("Fuerza F:", F)
+print("Magnitud:", F.magnitude)
+print("Incertidumbre (1-sigma):", F.uncertainty)
+
+# Cancelación de errores correlacionados: x - x = 0
+x = Q_(5.0, "m", uncertainty=0.1)
+print("x - x =", x - x)
+`,
+      numpy: `import numpy as np
+from measurekit import Q_
+
+# Cantidades vectoriales usando NumPy
+tiempos = Q_(np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0]), "s")
+aceleracion = Q_(9.81, "m/s^2")
+
+# Calcular velocidad v(t) = a * t
+velocidad = aceleracion * tiempos
+print("Array de velocidad:")
+print(velocidad)
+print("\\nVelocidad en km/h:")
+print(velocidad.to("km/hr"))
+`,
+      grammar: `from measurekit.ext.grammar import GrammarInterpreter
+
+# Usando notación física natural con MeasureNote
+interpreter = GrammarInterpreter()
+interpreter.run("""
+g = 9.81 +/- 0.02 m/s^2
+masa = 70 kg
+fuerza = masa * g
+""")
+
+# Consultar las variables calculadas
+print("Fuerza calculada:", interpreter.eval("fuerza = ?"))
+print("Fuerza convertida a kN:", interpreter.eval("fuerza => kN"))
+`
+    };
+
+    // UI elements
+    const loader = document.getElementById('loader');
+    const loaderStatus = document.getElementById('loaderStatus');
+    const loaderBar = document.getElementById('loaderBar');
+    const workspace = document.getElementById('workspace');
+    const runBtn = document.getElementById('runBtn');
+    const clearConsole = document.getElementById('clearConsole');
+    const consoleOutput = document.getElementById('consoleOutput');
+
+    let pyodide = null;
+    let editor = null;
+
+    // Initialize CodeMirror editor
+    function initEditor() {
+      editor = CodeMirror.fromTextArea(document.getElementById('editorCode'), {
+        mode: 'python',
+        theme: 'material-darker',
+        lineNumbers: true,
+        indentUnit: 4,
+        matchBrackets: true,
+        extraKeys: {
+          "Ctrl-Enter": runCode,
+          "Cmd-Enter": runCode
+        }
+      });
+    }
+
+    // Set progress bar
+    function setProgress(percent, statusText) {
+      loaderBar.style.width = percent + '%';
+      if (statusText) {
+        loaderStatus.innerText = statusText;
+      }
+    }
+
+    // Initialize Pyodide and load package
+    async function initPyodide() {
+      try {
+        setProgress(20, "Cargando archivos de Pyodide WebAssembly...");
+        pyodide = await loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+        });
+
+        setProgress(40, "Descargando paquete de MeasureKit...");
+        // Fetch the zipped package of measurekit
+        const response = await fetch('/measurekit.zip');
+        const buffer = await response.arrayBuffer();
+        
+        setProgress(60, "Extrayendo el paquete en el entorno virtual...");
+        // Write the zip to the virtual filesystem
+        pyodide.FS.writeFile('/home/pyodide/measurekit.zip', new Uint8Array(buffer));
+        
+        // Unzip using python's built-in zipfile
+        await pyodide.runPythonAsync(`
+import zipfile, sys
+with zipfile.ZipFile('/home/pyodide/measurekit.zip', 'r') as zip_ref:
+    zip_ref.extractall('/home/pyodide')
+sys.path.insert(0, '/home/pyodide')
+print("Successfully loaded measurekit into sys.path!")
+`);
+
+        setProgress(80, "Precargando librería NumPy...");
+        // Pre-load numpy since many scripts use it
+        await pyodide.loadPackage('numpy');
+
+        setProgress(100, "¡Listo!");
+        setTimeout(() => {
+          loader.style.display = 'none';
+          workspace.style.display = 'flex';
+          initEditor();
+          consoleOutput.innerText = "Sesión interactiva de Python 3.11. MeasureKit está cargado y listo.\\nPresiona 'Ejecutar' o Ctrl+Enter para ejecutar tu código.\\n";
+        }, 300);
+
+      } catch (err) {
+        loaderStatus.innerHTML = `<span style="color:var(--red)">Fallo al inicializar el playground:</span><br>${err.message}`;
+        loaderBar.style.backgroundColor = 'var(--red)';
+      }
+    }
+
+    // Run Python Code
+    async function runCode() {
+      if (!pyodide) return;
+      
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<span class="run-spinner"></span> Ejecutando...';
+      consoleOutput.classList.add('running');
+      
+      // Capture stdout and stderr
+      pyodide.runPython(`
+import sys, io
+sys.stdout = io.StringIO()
+sys.stderr = io.StringIO()
+`);
+
+      const code = editor ? editor.getValue() : document.getElementById('editorCode').value;
+
+      try {
+        await pyodide.runPythonAsync(code);
+        
+        const stdout = pyodide.runPython("sys.stdout.getvalue()");
+        const stderr = pyodide.runPython("sys.stderr.getvalue()");
+
+        let resultText = "";
+        if (stdout) resultText += stdout;
+        if (stderr) resultText += `\\n⚠️ Error:\\n${stderr}`;
+        if (!stdout && !stderr) resultText += "Código ejecutado con éxito sin salida de texto.\\n";
+
+        consoleOutput.innerText = resultText;
+      } catch (err) {
+        consoleOutput.innerText = `❌ Error en ejecución:\\n${err.message}`;
+      } finally {
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<span class="run-icon">▶</span> Ejecutar (Ctrl+Enter)';
+        consoleOutput.classList.remove('running');
+      }
+    }
+
+    // Bind triggers
+    runBtn.addEventListener('click', runCode);
+    clearConsole.addEventListener('click', () => {
+      consoleOutput.innerText = '';
+    });
+
+    // Snippet button binding
+    document.querySelectorAll('.snippet-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-snippet');
+        const code = snippets[key];
+        if (code && editor) {
+          editor.setValue(code);
+        }
+      });
+    });
+
+    // Start loading process
+    initPyodide();
+  </script>
+</DocsLayout>
+
+<style>
+  /* Loader styles */
+  .playground-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 3rem;
+    text-align: center;
+  }
+  .loader-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1.5rem;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .loader-progress {
+    width: 100%;
+    max-width: 300px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
+  .loader-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+
+  /* Workspace styles */
+  .playground-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: calc(100vh - var(--topbar-h) - 180px);
+    min-height: 500px;
+  }
+  .workspace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .snippets {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .snippet-label {
+    font-size: 0.85rem;
+    color: var(--text3);
+    margin-right: 0.25rem;
+  }
+  .snippet-btn {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .snippet-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .run-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.45rem 1.2rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .run-btn:hover {
+    background: var(--accent2);
+  }
+  .run-btn:active {
+    transform: scale(0.98);
+  }
+  .run-icon {
+    font-size: 0.75rem;
+  }
+  .run-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+
+  /* Pane split layout */
+  .workspace-panes {
+    display: flex;
+    gap: 1rem;
+    flex: 1;
+    min-height: 0;
+  }
+  .pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .pane-header {
+    background: var(--panel2);
+    border-bottom: 1px solid var(--border2);
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .clear-btn:hover {
+    color: var(--text);
+  }
+
+  /* Editor styles */
+  .editor-pane :global(.CodeMirror) {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    height: 100%;
+    background: transparent !important;
+  }
+  .editor-pane :global(.CodeMirror-gutters) {
+    background: transparent !important;
+    border-right: 1px solid var(--border2) !important;
+  }
+
+  /* Console styles */
+  .console-pane {
+    flex: 1;
+    background: #06080b;
+  }
+  .console-output {
+    flex: 1;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    overflow-y: auto;
+    color: #a3b8cc;
+    white-space: pre-wrap;
+  }
+  .console-output.running {
+    opacity: 0.7;
+  }
+
+  @media (max-width: 900px) {
+    .workspace-panes {
+      flex-direction: column;
+    }
+    .playground-workspace {
+      height: auto;
+      min-height: 800px;
+    }
+    .pane {
+      height: 350px;
+    }
+  }
+</style>

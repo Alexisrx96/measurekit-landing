@@ -1,0 +1,113 @@
+{
+  "classes": {
+    "Quantity": {
+      "name": "Quantity",
+      "docstring": "Represents a physical quantity with magnitude, unit, and uncertainty.\n\nExamples:\n    >>> from measurekit import Q_\n    >>> length = Q_(10, \"m\")\n    >>> time = Q_(2, \"s\")\n    >>> velocity = length / time\n    >>> print(velocity)\n    5.0 m/s\n    >>> print(velocity.to(\"km/h\"))\n    18.0 km/h",
+      "properties": [
+        {
+          "name": "_numeric_std_dev",
+          "docstring": "Returns the numeric standard deviation, even if std_dev returns a model."
+        },
+        {
+          "name": "_has_uncertainty",
+          "docstring": "Checks if uncertainty is non-zero, safely handling arrays and models."
+        },
+        {
+          "name": "m",
+          "docstring": "Alias for .magnitude (pint-compatible shorthand)."
+        },
+        {
+          "name": "u",
+          "docstring": "Alias for .unit."
+        },
+        {
+          "name": "uncertainty_model",
+          "docstring": "Returns the type of uncertainty model used by the core."
+        },
+        {
+          "name": "uncertainty",
+          "docstring": "Returns the standard deviation of the uncertainty."
+        },
+        {
+          "name": "unit",
+          "docstring": "Retrieves the unit of the quantity as a CompoundUnit."
+        },
+        {
+          "name": "uncertainty_obj",
+          "docstring": "Returns the rich uncertainty object (legacy support)."
+        },
+        {
+          "name": "vector_slice",
+          "docstring": "Returns the vector slice if using vectorized uncertainty."
+        },
+        {
+          "name": "lineage",
+          "docstring": "Returns the lineage dictionary if using correlated uncertainty."
+        }
+      ],
+      "methods": [
+        {
+          "name": "tree_flatten",
+          "signature": "tree_flatten(self)",
+          "docstring": "Flattens the Quantity for JAX Pytree registration."
+        },
+        {
+          "name": "tree_unflatten",
+          "signature": "tree_unflatten(cls, aux_data, children)",
+          "docstring": "Reconstructs the Quantity from JAX flatten results."
+        },
+        {
+          "name": "with_system",
+          "signature": "with_system(self, system)",
+          "docstring": "Returns a new Quantity bound to a different unit system."
+        },
+        {
+          "name": "simplify",
+          "signature": "simplify(self)",
+          "docstring": "Simplifies the unit of the quantity into the system's preferred form."
+        },
+        {
+          "name": "from_input",
+          "signature": "from_input(cls, value, unit, system, uncertainty, symbol)",
+          "docstring": "Creates a Quantity from raw input values."
+        },
+        {
+          "name": "to_latex",
+          "signature": "to_latex(self)",
+          "docstring": "Returns the LaTeX representation."
+        },
+        {
+          "name": "to_hdf5",
+          "signature": "to_hdf5(self, group, dataset_name)",
+          "docstring": "Saves the quantity to an HDF5 group."
+        },
+        {
+          "name": "from_hdf5",
+          "signature": "from_hdf5(cls, dataset)",
+          "docstring": "Loads a quantity from an HDF5 dataset."
+        },
+        {
+          "name": "with_uncertainty",
+          "signature": "with_uncertainty(self, uncertainty)",
+          "docstring": "Returns a new Quantity with the specified uncertainty."
+        },
+        {
+          "name": "to",
+          "signature": "to(self, target_unit)",
+          "docstring": "Converts the quantity to a different unit or moves to a device."
+        },
+        {
+          "name": "dot",
+          "signature": "dot(self, other)",
+          "docstring": "Computes dot product."
+        },
+        {
+          "name": "cross",
+          "signature": "cross(self, other)",
+          "docstring": "Computes cross product."
+        }
+      ]
+    }
+  },
+  "functions": {}
+}

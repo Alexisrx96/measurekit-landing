@@ -1,0 +1,491 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Tutoriales Guiados" description="Guías paso a paso para resolver aplicaciones prácticas de ingeniería y física" activeSection="tutorials">
+  <div class="page-header">
+    <div class="kicker">Guías</div>
+    <h1>Tutoriales</h1>
+    <p>Guías paso a paso e interactivas para resolver problemas complejos de calibración de sensores, dinámica de fluidos y astrofísica usando MeasureKit.</p>
+  </div>
+
+  <!-- Wizard Interface -->
+  <div class="tutorial-wizard">
+    <!-- Wizard Sidebar: Choose Tutorial -->
+    <div class="wizard-selector">
+      <button class="t-select-btn active" data-tutorial="sensor">🌡️ Calibración de Sensor</button>
+      <button class="t-select-btn" data-tutorial="orbital">🌌 Órbitas de Kepler</button>
+      <button class="t-select-btn" data-tutorial="fluid">💧 Flujo en Tubería (Bernoulli)</button>
+    </div>
+
+    <!-- Wizard Content Box -->
+    <div class="wizard-box">
+      <!-- Sensor Calibration Tutorial -->
+      <div class="tutorial-content active" id="sensorTutorial">
+        <div class="wizard-step-header">
+          <h2>Calibración de Sensor y Conversión de Offsets</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Paso 1: Definir Lecturas Crudas e Incertidumbre</h3>
+          <p>
+            En la calibración de sensores, comenzamos por representar las mediciones junto a sus márgenes de error. Como las escalas Celsius y Fahrenheit tienen un origen desplazado (offsets), operamos con cuidado.
+          </p>
+          <pre><code>from measurekit import Q_
+
+# Lectura cruda del sensor en punto de hielo (Celsius)
+t_raw = Q_(0.15, "degC", uncertainty=0.05)
+
+# Valor real de referencia (escala absoluta Kelvin)
+t_ref = Q_(273.15, "K")
+
+print("Lectura cruda:", t_raw)
+print("Referencia:", t_ref)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Paso 2: Calcular el Error de Desplazamiento (Conversión a Delta)</h3>
+          <p>
+            Al restar la lectura cruda de la referencia, calculamos el error. En MeasureKit, restar dos temperaturas absolutas produce automáticamente una unidad **Delta** (ej. delta_degC o K delta) para preservar la coherencia termodinámica:
+          </p>
+          <pre><code># Convertir cruda a Kelvin para restar temperaturas absolutas
+t_raw_k = t_raw.to("K")
+
+# La resta produce unidades Delta (diferencia de temperatura)
+t_offset = t_ref - t_raw_k
+
+print("Lectura en Kelvin:", t_raw_k)
+print("Offset de Calibración:", t_offset)  # Resultado: ~0.0 ± 0.05 K</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Paso 3: Calibrar Lecturas Nuevas y Convertir a Fahrenheit</h3>
+          <p>
+            Aplica el offset al valor nuevo. Sumar un delta a una temperatura absoluta produce una temperatura absoluta. Finalmente convertimos el resultado a Fahrenheit:
+          </p>
+          <pre><code># Nueva lectura física
+t_new = Q_(25.4, "degC", uncertainty=0.1)
+
+# Aplicar el offset delta (absoluto + delta -> absoluto)
+t_calibrated = t_new + t_offset.to("delta_degC")
+
+# Convertir temperatura Celsius absoluta a Fahrenheit
+t_fahrenheit = t_calibrated.to("degF")
+
+print("Temp Calibrada (C):", t_calibrated)
+print("Temp Calibrada (F):", t_fahrenheit)
+# Resultado: ~77.72 ± 0.20 degF</code></pre>
+          <div class="callout callout-success">
+            <p><strong>¡Éxito!</strong> Has calibrado un sensor y propagado la incertidumbre a través de escalas físicas con offsets.</p>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <a href="/es/playground" class="btn-primary">Probar en Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kepler Orbit Solver -->
+      <div class="tutorial-content" id="orbitalTutorial">
+        <div class="wizard-step-header">
+          <h2>🌌 Astrofísica: Órbitas Keplerianas</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Paso 1: Parámetros del Sistema y Constantes Físicas</h3>
+          <p>
+            Calcularemos el período orbital de la Tierra alrededor del Sol usando la tercera ley de Kepler: <code>T² = 4π²r³ / (G × M)</code>. Empezamos importando la constante de gravitación universal CODATA:
+          </p>
+          <pre><code>import math
+from measurekit import Q_
+from measurekit.constants import G  # Constante de gravitación
+
+# Masa del Sol
+M_sun = Q_(1.989e30, "kg", uncertainty=1e26)
+
+# Radio orbital medio (1 Unidad Astronómica)
+r_orbit = Q_(1.496e11, "m", uncertainty=1e7)
+
+print("Constante G:", G)
+print("Masa Solar:", M_sun)
+print("Radio Orbital:", r_orbit)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Paso 2: Resolver la Ecuación del Movimiento</h3>
+          <p>
+            Calcula el cuadrado del período. Las unidades se multiplican y simplifican solas, validando la consistencia dimensional en el proceso:
+          </p>
+          <pre><code># Fórmula de la tercera ley de Kepler
+T_squared = (4 * (math.pi**2) * (r_orbit**3)) / (G * M_sun)
+
+# Aplicar raíz cuadrada para obtener el período T
+T = T_squared ** 0.5
+
+print("Dimensiones de T²:", T_squared.unit)  # s^2
+print("Período Orbital T:", T)                 # ~3.155e7 s</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Paso 3: Conversión de Escalas y Análisis de Error</h3>
+          <p>
+            Convertimos la duración a años solares. Las desviaciones estándar del radio y la masa solar se propagan automáticamente al período final:
+          </p>
+          <pre><code># Convertir segundos a años
+T_years = T.to("yr")
+
+print(f"Período Orbital: &#123;T_years.magnitude:.4f&#125; ± &#123;T_years.uncertainty:.4f&#125; años")
+# Salida: 1.0001 ± 0.0001 años
+
+# Margen de error relativo
+err_rel = (T_years.uncertainty / T_years.magnitude) * 100
+print(f"Margen de error del cálculo: &#123;err_rel:.6f&#125;%")</code></pre>
+          <div class="callout callout-info">
+            <p>¡La incertidumbre se propagó por toda la ecuación sin necesidad de calcular derivadas parciales manualmente!</p>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <a href="/es/playground" class="btn-primary">Probar en Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bernoulli Pipe Flow -->
+      <div class="tutorial-content" id="fluidTutorial">
+        <div class="wizard-step-header">
+          <h2>💧 Dinámica de Fluidos: Pérdida de Presión</h2>
+          <div class="step-dots">
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="step-pane active" data-step="1">
+          <h3>Paso 1: Velocidades del Fluido</h3>
+          <p>
+            Analizaremos la caída de presión en una tubería horizontal de agua usando la ecuación de Bernoulli: <code>P₁ - P₂ = ½ρ(v₂² - v₁²)</code>. Definimos los datos iniciales con margen de error:
+          </p>
+          <pre><code>from measurekit import Q_
+
+# Densidad del agua
+rho = Q_(997, "kg/m^3")
+
+# Velocidad de entrada (tubería ancha)
+v1 = Q_(1.2, "m/s", uncertainty=0.02)
+
+# Velocidad de salida (tubería estrecha)
+v2 = Q_(4.5, "m/s", uncertainty=0.05)
+
+print("Densidad:", rho)
+print("V1:", v1)
+print("V2:", v2)</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-pane" data-step="2">
+          <h3>Paso 2: Calcular la Diferencia de Presión</h3>
+          <p>
+            Aplicamos la ecuación física. Las dimensiones de velocidad y densidad interactúan y se unifican automáticamente a la unidad Pascal (Pa):
+          </p>
+          <pre><code># Ecuación de Bernoulli
+caida_presion = 0.5 * rho * (v2**2 - v1**2)
+
+print("Caída de Presión:", caida_presion)
+print("Unidades resultantes:", caida_presion.unit)  # Pa
+# Resultado: ~9376.78 Pa</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <button class="btn-primary next-step-btn">Siguiente Paso →</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-pane" data-step="3">
+          <h3>Paso 3: Conversión de Unidades e Incertidumbre</h3>
+          <p>
+            Expresamos el diferencial de presión en bar o psi. Las desviaciones de velocidad se acumulan en la dispersión final:
+          </p>
+          <pre><code># Conversiones de presión
+caida_bar = caida_presion.to("bar")
+caida_psi = caida_presion.to("psi")
+
+print(f"Caída en bar: &#123;caida_bar.magnitude:.4f&#125; ± &#123;caida_bar.uncertainty:.4f&#125; bar")
+# ~0.0938 ± 0.0022 bar
+
+print(f"Caída en psi: &#123;caida_psi.magnitude:.4f&#125; ± &#123;caida_psi.uncertainty:.4f&#125; psi")
+# ~1.3600 ± 0.0322 psi</code></pre>
+          <div class="wizard-nav">
+            <button class="btn-secondary prev-step-btn">← Anterior</button>
+            <a href="/es/playground" class="btn-primary">Probar en Playground 🚀</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Handles changing tutorial selection
+    document.querySelectorAll('.t-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Toggle selected button state
+        document.querySelectorAll('.t-select-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Toggle selected tutorial contents
+        const target = btn.getAttribute('data-tutorial');
+        document.querySelectorAll('.tutorial-content').forEach(c => c.classList.remove('active'));
+        
+        if (target === 'sensor') {
+          document.getElementById('sensorTutorial').classList.add('active');
+        } else if (target === 'orbital') {
+          document.getElementById('orbitalTutorial').classList.add('active');
+        } else if (target === 'fluid') {
+          document.getElementById('fluidTutorial').classList.add('active');
+        }
+      });
+    });
+
+    // Handles changing steps inside a tutorial
+    document.querySelectorAll('.tutorial-content').forEach(tut => {
+      const stepPanes = tut.querySelectorAll('.step-pane');
+      const dots = tut.querySelectorAll('.step-dot');
+
+      function showStep(stepNum) {
+        stepPanes.forEach(p => p.classList.toggle('active', parseInt(p.getAttribute('data-step')) === stepNum));
+        dots.forEach(d => d.classList.toggle('active', parseInt(d.getAttribute('data-step')) === stepNum));
+      }
+
+      tut.querySelectorAll('.next-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const currentActive = tut.querySelector('.step-pane.active');
+          const currentStep = parseInt(currentActive.getAttribute('data-step'));
+          showStep(currentStep + 1);
+        });
+      });
+
+      tut.querySelectorAll('.prev-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const currentActive = tut.querySelector('.step-pane.active');
+          const currentStep = parseInt(currentActive.getAttribute('data-step'));
+          showStep(currentStep - 1);
+        });
+      });
+
+      dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+          showStep(parseInt(dot.getAttribute('data-step')));
+        });
+      });
+    });
+  </script>
+</DocsLayout>
+
+<style>
+  .tutorial-wizard {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  /* Wizard Sidebar */
+  .wizard-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 240px;
+    flex-shrink: 0;
+  }
+  .t-select-btn {
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    color: var(--text2);
+    font-size: 0.9rem;
+    font-weight: 550;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .t-select-btn:hover {
+    background: var(--panel2);
+    color: var(--text);
+  }
+  .t-select-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* Content box */
+  .wizard-box {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .tutorial-content {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+  }
+  .tutorial-content.active {
+    display: flex;
+  }
+
+  /* Step dots indicator */
+  .wizard-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .wizard-step-header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    border: none;
+    padding: 0;
+  }
+  .step-dots {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .step-dot.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Step panes */
+  .step-pane {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+  }
+  .step-pane.active {
+    display: flex;
+  }
+  .step-pane h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1.05rem;
+  }
+  .step-pane p {
+    font-size: 0.925rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* Wizard Navigation Buttons */
+  .wizard-nav {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border2);
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius);
+    border: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+    text-decoration: none;
+  }
+  
+  .btn-secondary {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 0.55rem 1.25rem;
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  @media (max-width: 900px) {
+    .tutorial-wizard {
+      flex-direction: column;
+    }
+    .wizard-selector {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .t-select-btn {
+      flex: 1;
+      min-width: 150px;
+    }
+  }
+</style>

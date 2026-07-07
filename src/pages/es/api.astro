@@ -1,5 +1,6 @@
 ---
 import DocsLayout from "../../layouts/DocsLayout.astro";
+import docstrings from "../../data/api-docstrings.json";
 
 const api = [
   {
@@ -87,7 +88,8 @@ const grammarApi = [
       <li><a href="#uncertainty">Clase Uncertainty</a></li>
       <li><a href="#module-functions">Funciones de Módulo</a></li>
       <li><a href="#grammar-api">API de Gramática</a></li>
-      <li><a href="#exceptions">Excepciones</a></li>
+      <li><a href="#exceptions">Exceptions</a></li>
+      <li><a href="#extracted-api">API Extraída</a></li>
       <li><a href="#units-module">Módulo de Unidades</a></li>
     </ul>
   </div>
@@ -308,6 +310,38 @@ try:
     Q_(10, "m") + Q_(5, "s")  # dimensiones incompatibles
 except IncompatibleUnitsError as e:
     print(f"Unidades incompatibles: &#123;e&#125;")</code></pre>
+
+  <!-- Extracted API -->
+  <h2 id="extracted-api">API de Quantity (Auto-generada desde el Código Fuente)</h2>
+  <p>Esta sección se genera dinámicamente analizando el código fuente de la clase <code>Quantity</code>, mostrando todas las propiedades y métodos disponibles en la versión actual.</p>
+  
+  <div class="api-card">
+    <h3>Propiedades</h3>
+    <table>
+      <thead><tr><th>Propiedad</th><th>Descripción (Inglés)</th></tr></thead>
+      <tbody>
+        {docstrings.classes.Quantity.properties.filter(p => !p.name.startsWith('_')).map(prop => (
+          <tr>
+            <td><code>.{prop.name}</code></td>
+            <td>{prop.docstring || "No docstring provided."}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <h3>Métodos</h3>
+    <table>
+      <thead><tr><th>Signatura</th><th>Descripción (Inglés)</th></tr></thead>
+      <tbody>
+        {docstrings.classes.Quantity.methods.map(method => (
+          <tr>
+            <td><code>.{method.signature}</code></td>
+            <td>{method.docstring || "No docstring provided."}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 
   <!-- Units module -->
   <h2 id="units-module">Módulo de Unidades</h2>
