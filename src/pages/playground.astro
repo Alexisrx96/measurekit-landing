@@ -234,7 +234,7 @@ except Exception as e:
         
         if (codeParam) {
           try {
-            initialCode = atob(codeParam);
+            initialCode = decodeURIComponent(escape(atob(codeParam)));
             shouldAutoRun = true;
           } catch (e) {
             console.error("Failed to decode base64 code:", e);
