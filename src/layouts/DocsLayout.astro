@@ -188,17 +188,47 @@ const t = {
       document.querySelectorAll('.run-in-playground').forEach(link => {
         link.addEventListener('click', (e) => {
           e.preventDefault();
-          const container = link.closest('.step-pane') || link.closest('section') || link.closest('.api-card') || link.closest('.demo-card') || document;
-          const codeEl = container.querySelector('pre code');
-          if (codeEl) {
-            const rawCode = codeEl.textContent;
+          
+          const activeStepPane = link.closest('.step-pane');
+          const activeTutorialContent = link.closest('.tutorial-content');
+          
+          let rawCode = "";
+          
+          if (activeStepPane && activeTutorialContent) {
+            // This is a step inside a tutorial wizard!
+            // Gather all code blocks up to the current step to avoid NameError
+            const currentStep = parseInt(activeStepPane.getAttribute('data-step'));
+            const allSteps = Array.from(activeTutorialContent.querySelectorAll('.step-pane'));
+            
+            // Sort steps by number to ensure correct execution order
+            allSteps.sort((a, b) => parseInt(a.getAttribute('data-step')) - parseInt(b.getAttribute('data-step')));
+            
+            const codes = [];
+            for (const stepPane of allSteps) {
+              const stepNum = parseInt(stepPane.getAttribute('data-step'));
+              if (stepNum <= currentStep) {
+                const codeEl = stepPane.querySelector('pre code');
+                if (codeEl) {
+                  codes.push(codeEl.textContent.trim());
+                }
+              }
+            }
+            rawCode = codes.join('\n\n# --- Continuation of steps ---\n\n');
+          } else {
+            // This is a standalone example section (not in a wizard)
+            const container = link.closest('section') || link.closest('.api-card') || link.closest('.demo-card') || document;
+            const codeEl = container.querySelector('pre code');
+            if (codeEl) {
+              rawCode = codeEl.textContent;
+            }
+          }
+          
+          if (rawCode) {
             const encoded = btoa(unescape(encodeURIComponent(rawCode)));
             const isSp = window.location.pathname.startsWith('/es');
             
             // Build the backlink to resume state
             let fromUrl = window.location.pathname;
-            const activeStepPane = link.closest('.step-pane');
-            const activeTutorialContent = link.closest('.tutorial-content');
             if (activeStepPane && activeTutorialContent) {
               const step = activeStepPane.getAttribute('data-step');
               const tutorialId = activeTutorialContent.id.replace('Tutorial', ''); // e.g. "sensor"
