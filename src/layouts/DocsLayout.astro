@@ -184,6 +184,21 @@ const t = {
         });
       });
 
+      // Run in Playground link interception
+      document.querySelectorAll('.run-in-playground').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const container = link.closest('.step-pane') || link.closest('section') || link.closest('.api-card') || link.closest('.demo-card') || document;
+          const codeEl = container.querySelector('pre code');
+          if (codeEl) {
+            const rawCode = codeEl.textContent;
+            const encoded = btoa(unescape(encodeURIComponent(rawCode)));
+            const isSp = window.location.pathname.startsWith('/es');
+            window.location.href = `${isSp ? '/es' : ''}/playground?code=${encoded}`;
+          }
+        });
+      });
+
       // Code block copy buttons
       document.querySelectorAll('pre').forEach(pre => {
         const btn = document.createElement('button');

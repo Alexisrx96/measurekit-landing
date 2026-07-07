@@ -38,7 +38,13 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     <div class="workspace-panes">
       <!-- Editor Pane -->
       <div class="pane editor-pane">
-        <div class="pane-header">Editor (Python 3.11)</div>
+        <div class="pane-header">
+          <span>Editor (Python 3.11)</span>
+          <div class="pane-actions">
+            <button class="pane-action-btn" id="resetBtn" title="Restablecer código por defecto">Reiniciar</button>
+            <button class="pane-action-btn" id="downloadBtn" title="Descargar script en Python">Descargar</button>
+          </div>
+        </div>
         <textarea id="editorCode">from measurekit import Q_
 
 # 1. Cálculos Físicos
@@ -200,12 +206,59 @@ print("Successfully loaded measurekit into sys.path!")
         // Pre-load numpy since many scripts use it
         await pyodide.loadPackage('numpy');
 
+        const defaultCode = `from measurekit import Q_
+
+# 1. Cálculos Físicos
+distancia = Q_(10, "km")
+tiempo = Q_(2.5, "hr")
+velocidad = distancia / tiempo
+
+print("La velocidad es:", velocidad)
+print("Velocidad en m/s:", velocidad.to("m/s"))
+
+# 2. Prevenir operaciones inválidas
+try:
+    distancia + tiempo
+except Exception as e:
+    print("\\n❌ Se evitó la operación inválida:")
+    print(e)
+`;
+
+        // Check query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeParam = urlParams.get('code');
+        const snippetParam = urlParams.get('snippet');
+        
+        let initialCode = "";
+        let shouldAutoRun = false;
+        
+        if (codeParam) {
+          try {
+            initialCode = atob(codeParam);
+            shouldAutoRun = true;
+          } catch (e) {
+            console.error("Failed to decode base64 code:", e);
+          }
+        } else if (snippetParam && snippets[snippetParam]) {
+          initialCode = snippets[snippetParam];
+          shouldAutoRun = true;
+        }
+
         setProgress(100, "¡Listo!");
         setTimeout(() => {
           loader.style.display = 'none';
           workspace.style.display = 'flex';
           initEditor();
-          consoleOutput.innerText = "Sesión interactiva de Python 3.11. MeasureKit está cargado y listo.\\nPresiona 'Ejecutar' o Ctrl+Enter para ejecutar tu código.\\n";
+          
+          if (initialCode) {
+            editor.setValue(initialCode);
+          }
+          
+          consoleOutput.innerText = "Sesión interactiva de Python 3.11. MeasureKit está cargado y listo.\nPresiona 'Ejecutar' o Ctrl+Enter para ejecutar tu código.\n";
+          
+          if (shouldAutoRun) {
+            runCode();
+          }
         }, 300);
 
       } catch (err) {
@@ -265,8 +318,31 @@ sys.stderr = io.StringIO()
         const code = snippets[key];
         if (code && editor) {
           editor.setValue(code);
+          runCode(); // Auto-run snippet on click!
         }
       });
+    });
+
+    // Reset button
+    document.getElementById('resetBtn')?.addEventListener('click', () => {
+      if (editor) {
+        editor.setValue(defaultCode);
+      }
+    });
+
+    // Download button
+    document.getElementById('downloadBtn')?.addEventListener('click', () => {
+      if (!editor) return;
+      const code = editor.getValue();
+      const blob = new Blob([code], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'measurekit_script.py';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
 
     // Start loading process
@@ -432,6 +508,27 @@ sys.stderr = io.StringIO()
   }
   .clear-btn:hover {
     color: var(--text);
+  }
+
+  .pane-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .pane-action-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text2);
+    font-size: 0.7rem;
+    font-family: inherit;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pane-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--panel2);
   }
 
   /* Editor styles */

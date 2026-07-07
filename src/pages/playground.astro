@@ -38,7 +38,13 @@ import DocsLayout from "../layouts/DocsLayout.astro";
     <div class="workspace-panes">
       <!-- Editor Pane -->
       <div class="pane editor-pane">
-        <div class="pane-header">Editor (Python 3.11)</div>
+        <div class="pane-header">
+          <span>Editor (Python 3.11)</span>
+          <div class="pane-actions">
+            <button class="pane-action-btn" id="resetBtn" title="Reset default code">Reset</button>
+            <button class="pane-action-btn" id="downloadBtn" title="Download Python script">Download</button>
+          </div>
+        </div>
         <textarea id="editorCode">from measurekit import Q_
 
 # 1. Physics Calculations
@@ -200,12 +206,59 @@ print("Successfully loaded measurekit into sys.path!")
         // Pre-load numpy since many scripts use it
         await pyodide.loadPackage('numpy');
 
+        const defaultCode = `from measurekit import Q_
+
+# 1. Physics Calculations
+distance = Q_(10, "km")
+time = Q_(2.5, "hr")
+speed = distance / time
+
+print("Speed is:", speed)
+print("Speed in m/s:", speed.to("m/s"))
+
+# 2. Prevent invalid operations
+try:
+    distance + time
+except Exception as e:
+    print("\\n❌ Caught invalid operation:")
+    print(e)
+`;
+
+        // Check query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeParam = urlParams.get('code');
+        const snippetParam = urlParams.get('snippet');
+        
+        let initialCode = "";
+        let shouldAutoRun = false;
+        
+        if (codeParam) {
+          try {
+            initialCode = atob(codeParam);
+            shouldAutoRun = true;
+          } catch (e) {
+            console.error("Failed to decode base64 code:", e);
+          }
+        } else if (snippetParam && snippets[snippetParam]) {
+          initialCode = snippets[snippetParam];
+          shouldAutoRun = true;
+        }
+
         setProgress(100, "Ready!");
         setTimeout(() => {
           loader.style.display = 'none';
           workspace.style.display = 'flex';
           initEditor();
+          
+          if (initialCode) {
+            editor.setValue(initialCode);
+          }
+          
           consoleOutput.innerText = "Python 3.11 interactive session. MeasureKit is imported and ready.\\nPress 'Run Code' or Ctrl+Enter to execute.\\n";
+          
+          if (shouldAutoRun) {
+            runCode();
+          }
         }, 300);
 
       } catch (err) {
@@ -265,8 +318,31 @@ sys.stderr = io.StringIO()
         const code = snippets[key];
         if (code && editor) {
           editor.setValue(code);
+          runCode(); // Auto-run snippet on click!
         }
       });
+    });
+
+    // Reset button
+    document.getElementById('resetBtn')?.addEventListener('click', () => {
+      if (editor) {
+        editor.setValue(defaultCode);
+      }
+    });
+
+    // Download button
+    document.getElementById('downloadBtn')?.addEventListener('click', () => {
+      if (!editor) return;
+      const code = editor.getValue();
+      const blob = new Blob([code], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'measurekit_script.py';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
 
     // Start loading process
@@ -432,6 +508,27 @@ sys.stderr = io.StringIO()
   }
   .clear-btn:hover {
     color: var(--text);
+  }
+
+  .pane-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .pane-action-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text2);
+    font-size: 0.7rem;
+    font-family: inherit;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pane-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--panel2);
   }
 
   /* Editor styles */
