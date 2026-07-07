@@ -194,7 +194,18 @@ const t = {
             const rawCode = codeEl.textContent;
             const encoded = btoa(unescape(encodeURIComponent(rawCode)));
             const isSp = window.location.pathname.startsWith('/es');
-            window.location.href = `${isSp ? '/es' : ''}/playground?code=${encoded}`;
+            
+            // Build the backlink to resume state
+            let fromUrl = window.location.pathname;
+            const activeStepPane = link.closest('.step-pane');
+            const activeTutorialContent = link.closest('.tutorial-content');
+            if (activeStepPane && activeTutorialContent) {
+              const step = activeStepPane.getAttribute('data-step');
+              const tutorialId = activeTutorialContent.id.replace('Tutorial', ''); // e.g. "sensor"
+              fromUrl += `?tutorial=${tutorialId}&step=${step}`;
+            }
+            
+            window.location.href = `${isSp ? '/es' : ''}/playground?code=${encoded}&from=${encodeURIComponent(fromUrl)}`;
           }
         });
       });

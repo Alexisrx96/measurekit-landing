@@ -23,12 +23,15 @@ import DocsLayout from "../layouts/DocsLayout.astro";
   <!-- Playground Workspace (Initially Hidden) -->
   <div class="playground-workspace" id="workspace" style="display: none;">
     <div class="workspace-header">
-      <div class="snippets">
-        <span class="snippet-label">Snippets:</span>
-        <button class="snippet-btn" data-snippet="basic">Basic Math</button>
-        <button class="snippet-btn" data-snippet="uncertainty">Uncertainty</button>
-        <button class="snippet-btn" data-snippet="numpy">NumPy Array</button>
-        <button class="snippet-btn" data-snippet="grammar">MeasureNote</button>
+      <div class="workspace-header-left" style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <a href="#" id="backToTutorial" class="back-tutorial-btn" style="display: none;">← Back to Tutorial</a>
+        <div class="snippets">
+          <span class="snippet-label">Snippets:</span>
+          <button class="snippet-btn" data-snippet="basic">Basic Math</button>
+          <button class="snippet-btn" data-snippet="uncertainty">Uncertainty</button>
+          <button class="snippet-btn" data-snippet="numpy">NumPy Array</button>
+          <button class="snippet-btn" data-snippet="grammar">MeasureNote</button>
+        </div>
       </div>
       <button class="run-btn" id="runBtn">
         <span class="run-icon">▶</span> Run (Ctrl+Enter)
@@ -244,6 +247,16 @@ except Exception as e:
           shouldAutoRun = true;
         }
 
+        // Check for from backlink parameter
+        const fromParam = urlParams.get('from');
+        if (fromParam) {
+          const backBtn = document.getElementById('backToTutorial');
+          if (backBtn) {
+            backBtn.href = fromParam;
+            backBtn.style.display = 'inline-flex';
+          }
+        }
+
         setProgress(100, "Ready!");
         setTimeout(() => {
           loader.style.display = 'none';
@@ -254,7 +267,7 @@ except Exception as e:
             editor.setValue(initialCode);
           }
           
-          consoleOutput.innerText = "Python 3.11 interactive session. MeasureKit is imported and ready.\\nPress 'Run Code' or Ctrl+Enter to execute.\\n";
+          consoleOutput.innerText = "Python 3.11 interactive session. MeasureKit is imported and ready.\nPress 'Run Code' or Ctrl+Enter to execute.\n";
           
           if (shouldAutoRun) {
             runCode();
@@ -417,6 +430,27 @@ sys.stderr = io.StringIO()
     gap: 0.5rem;
     flex-wrap: wrap;
   }
+  .back-tutorial-btn {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.15s;
+  }
+  .back-tutorial-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent2);
+    background: var(--accent-glow);
+    text-decoration: none;
+  }
+
   .snippet-label {
     font-size: 0.85rem;
     color: var(--text3);

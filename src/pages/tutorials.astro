@@ -318,6 +318,29 @@ print(f"Drop in psi: &#123;drop_psi.magnitude:.4f&#125; ± &#123;drop_psi.uncert
         });
       });
     });
+
+    // Check URL parameters on load to restore state (resuming tutorial)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramTutorial = urlParams.get('tutorial');
+    const paramStep = parseInt(urlParams.get('step'));
+
+    if (paramTutorial) {
+      const tabBtn = document.querySelector(`.t-select-btn[data-tutorial="${paramTutorial}"]`);
+      if (tabBtn) {
+        tabBtn.click();
+      }
+    }
+    
+    if (paramStep) {
+      const activeTut = document.querySelector('.tutorial-content.active');
+      if (activeTut) {
+        const dots = activeTut.querySelectorAll('.step-dot');
+        const dot = Array.from(dots).find(d => parseInt(d.getAttribute('data-step')) === paramStep);
+        if (dot) {
+          dot.click();
+        }
+      }
+    }
   </script>
 </DocsLayout>
 
