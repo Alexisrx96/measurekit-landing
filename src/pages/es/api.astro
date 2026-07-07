@@ -1,0 +1,371 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const api = [
+  {
+    name: "Q_",
+    signature: "Q_(value, unit, uncertainty=None)",
+    desc: "La factoría principal para crear objetos Quantity. Devuelve un objeto Quantity a partir de un valor numérico y una cadena de texto de unidad.",
+    params: [
+      { name: "value", type: "float | int | np.ndarray | torch.Tensor | jax.Array", desc: "El valor numérico." },
+      { name: "unit", type: "str", desc: "La cadena de texto que describe la unidad física, ej. 'm/s', 'kg*m^2/s^2', 'degC'." },
+      { name: "uncertainty", type: "float | None", desc: "Desviación estándar opcional (1σ) de la medición." },
+    ],
+    returns: "Quantity",
+    example: `from measurekit import Q_\n\nv = Q_(10, "m/s")\nF = Q_(9.81, "m/s^2", uncertainty=0.02)`
+  },
+  {
+    name: "Quantity",
+    signature: "class Quantity",
+    desc: "La clase central que representa una cantidad física — un valor numérico con una unidad asociada e incertidumbre opcional.",
+    params: [],
+    returns: null,
+    example: `from measurekit import Quantity\n\nq = Quantity.from_input(10, "m")\nprint(q.magnitude) # 10.0\nprint(q.unit)      # Unit("m")\nprint(q.dimension) # [length]`,
+    methods: [
+      { name: ".to(unit_str)", desc: "Devuelve una nueva Quantity convertida a la unidad indicada." },
+      { name: ".ito(unit_str)", desc: "No existe en la librería. Usa q = q.to(unit_str) en su lugar." },
+      { name: ".to_base()", desc: "Devuelve una nueva Quantity en unidades base del SI (m, kg, s, A, K, mol, cd)." },
+      { name: ".diff(variable)", desc: "Diferenciación simbólica (requiere el extra [symbolic])." },
+      { name: ".magnitude", desc: "El valor numérico neto (flotante o tensor, nunca una Quantity)." },
+      { name: ".m", desc: "Alias para .magnitude (soportado por compatibilidad con Pint)." },
+      { name: ".unit", desc: "El objeto CompoundUnit asociado a esta Quantity." },
+      { name: ".u", desc: "Alias para .unit." },
+      { name: ".uncertainty", desc: "La desviación estándar de la incertidumbre." },
+      { name: ".dimension", desc: "La dimensión física (ej. [length²])." },
+    ]
+  },
+  {
+    name: "Uncertainty",
+    signature: "class Uncertainty",
+    desc: "Clase base abstracta para modelos de incertidumbre. En la práctica, pasas un float al parámetro uncertainty de Q_ y MeasureKit lo envuelve automáticamente.",
+    params: [],
+    returns: null,
+    example: `from measurekit import Q_\n\nq = Q_(9.81, "m/s^2", uncertainty=0.02)\nprint(q.uncertainty) # 0.02`,
+    methods: [
+      { name: ".std_dev", desc: "La desviación estándar (1σ)." },
+      { name: ".variance", desc: "La varianza (desv_est²)." },
+    ]
+  },
+];
+
+const functions = [
+  { name: "get_current_system()", module: "measurekit", desc: "Devuelve el UnitSystem activo." },
+  { name: "get_unit(expr)", module: "measurekit", desc: "Analiza y devuelve un objeto Unit a partir de una cadena." },
+  { name: "propagation_mode(mode)", module: "measurekit", desc: "Gestor de contexto para alternar modos de propagación de covarianza: 'correlated' (por defecto), 'uncorrelated', etc." },
+  { name: "uncertainty_mode(mode)", module: "measurekit", desc: "Gestor de contexto para configurar el backend de cálculo de incertidumbres ('python', 'monte_carlo', 'unscented')." },
+  { name: "system_context(system)", module: "measurekit", desc: "Gestor de contexto para usar un UnitSystem personalizado (con alias use_system)." },
+  { name: "create_system(config)", module: "measurekit", desc: "Crea un UnitSystem a partir de un archivo de configuración (ej. 'imperial.conf')." },
+  { name: "create_default_system()", module: "measurekit", desc: "Crea y devuelve el UnitSystem por defecto (SI)." },
+  { name: "save_state(path, quantities)", module: "measurekit", desc: "Serializa el estado del CovarianceStore de la aplicación (requiere extra [io])." },
+  { name: "load_state(path)", module: "measurekit", desc: "Deserializa y restaura el estado del CovarianceStore (requiere extra [io])." },
+  { name: "jit(fn)", module: "measurekit", desc: "Decorador/función para compilar JIT una función física." },
+];
+
+const grammarApi = [
+  { syntax: "nombre = valor unidad", desc: "Asignación de variable. También se acepta nombre -> valor unidad." },
+  { syntax: "expr => unidad", desc: "Conversión de unidad de la expresión en tiempo de evaluación." },
+  { syntax: "expr == valor unidad", desc: "Aseveración (retorna True o False)." },
+  { syntax: "nombre = ?", desc: "Consulta el valor actual e incertidumbre de la variable." },
+  { syntax: "valor +/- inc unidad", desc: "Literal de cantidad con incertidumbre." },
+  { syntax: "# comentario", desc: "Comentario de línea." },
+];
+---
+
+<DocsLayout title="Referencia API" description="Referencia detallada de la API pública de MeasureKit" activeSection="api">
+  <div class="page-header">
+    <div class="kicker">Referencia</div>
+    <h1>Referencia API</h1>
+    <p>Documentación completa de las clases, métodos y funciones de MeasureKit.</p>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc-card">
+    <p class="toc-label">En esta página</p>
+    <ul class="toc-list">
+      <li><a href="#q-factory">Factoría Q_</a></li>
+      <li><a href="#quantity">Clase Quantity</a></li>
+      <li><a href="#uncertainty">Clase Uncertainty</a></li>
+      <li><a href="#module-functions">Funciones de Módulo</a></li>
+      <li><a href="#grammar-api">API de Gramática</a></li>
+      <li><a href="#exceptions">Excepciones</a></li>
+      <li><a href="#units-module">Módulo de Unidades</a></li>
+    </ul>
+  </div>
+
+  <!-- Q_ -->
+  <h2 id="q-factory">Q_ — Factoría de Cantidades</h2>
+  <div class="api-card">
+    <div class="api-signature"><span class="api-name">Q_</span><span class="api-args">(value, unit, uncertainty=0.0, symbol=None)</span></div>
+    <p>El punto de entrada principal para crear instancias de cantidades físicas.</p>
+    <h4>Parámetros</h4>
+    <table>
+      <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>value</code></td>
+          <td><code>float | int | ndarray | Tensor | Array | str</code></td>
+          <td>El valor numérico. Acepta escalares, vectores/arrays (NumPy, PyTorch, JAX), o una cadena tipo <code>"10 m/s"</code>.</td>
+        </tr>
+        <tr>
+          <td><code>unit</code></td>
+          <td><code>str | CompoundUnit | None</code></td>
+          <td>Expresión de la unidad. Requerido si el valor no es una cadena. Soporta <code>/</code>, <code>*</code>, <code>^</code>, prefijos y unidades con offset.</td>
+        </tr>
+        <tr>
+          <td><code>uncertainty</code></td>
+          <td><code>float</code></td>
+          <td>Desviación estándar opcional (1&sigma;). Por defecto es <code>0.0</code> (sin incertidumbre).</td>
+        </tr>
+        <tr>
+          <td><code>symbol</code></td>
+          <td><code>str | None</code></td>
+          <td>Nombre simbólico opcional para tracing o derivadas simbólicas.</td>
+        </tr>
+      </tbody>
+    </table>
+    <h4>Retorna</h4>
+    <p><code>Quantity</code> — Un envoltorio seguro de unidades alrededor del valor.</p>
+    <h4>Ejemplo</h4>
+    <pre><code>from measurekit import Q_
+
+# Escalar
+v = Q_(10, "m/s")
+
+# Con incertidumbre
+g = Q_(9.81, "m/s^2", uncertainty=0.02)
+
+# Array de NumPy
+import numpy as np
+arr = Q_(np.array([1, 2, 3]), "km")
+
+# Tensor de PyTorch
+import torch
+t = Q_(torch.tensor([1.0, 2.0]), "kg")</code></pre>
+  </div>
+
+  <!-- Quantity -->
+  <h2 id="quantity">Clase Quantity</h2>
+  <div class="api-card">
+    <div class="api-signature"><span class="api-kw">class</span> <span class="api-name">Quantity</span></div>
+    <p>Clase principal que representa una cantidad física física. Las instancias se crean normalmente con <code>Q_()</code>.</p>
+
+    <h4>Propiedades</h4>
+    <table>
+      <thead><tr><th>Propiedad</th><th>Tipo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>.magnitude</code></td><td><code>float | ndarray | ...</code></td><td>El valor numérico neto. Es la vía recomendada para acceder al número bruto.</td></tr>
+        <tr><td><code>.m</code></td><td><code>float | ndarray | ...</code></td><td>Alias abreviado para <code>.magnitude</code> (compatible con Pint).</td></tr>
+        <tr><td><code>.unit</code></td><td><code>CompoundUnit</code></td><td>El objeto de unidad física asociado.</td></tr>
+        <tr><td><code>.u</code></td><td><code>CompoundUnit</code></td><td>Alias abreviado para <code>.unit</code>.</td></tr>
+        <tr><td><code>.uncertainty</code></td><td><code>float | Numeric</code></td><td>La desviación estándar (1&sigma;), retorna <code>0.0</code> si no está configurada.</td></tr>
+        <tr><td><code>.dimension</code></td><td><code>Dimension</code></td><td>La dimensión física (ej. [length&sup2;]).</td></tr>
+        <tr><td><code>.symbol</code></td><td><code>str | None</code></td><td>Nombre simbólico opcional para trazas simbólicas.</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Métodos</h4>
+    <table>
+      <thead><tr><th>Método</th><th>Retorna</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>.to(unit_str)</code></td><td><code>Quantity</code></td><td>Devuelve una nueva Quantity convertida a la unidad indicada. Lanza <code>IncompatibleUnitsError</code> si las dimensiones no coinciden.</td></tr>
+        <tr><td><code>.to_base()</code></td><td><code>Quantity</code></td><td>Devuelve una nueva Quantity convertida a las unidades base del SI (m, kg, s, A, K, mol, cd).</td></tr>
+        <tr><td><code>.diff(var, order=1)</code></td><td><code>Quantity</code></td><td>Diferenciación simbólica (requiere extra <code>[symbolic]</code>).</td></tr>
+        <tr><td><code>.with_uncertainty(unc)</code></td><td><code>Quantity</code></td><td>Retorna una nueva Quantity con la incertidumbre especificada aplicada.</td></tr>
+        <tr><td><code>.__add__, __sub__</code></td><td><code>Quantity</code></td><td>Suma y resta. Lanza <code>IncompatibleUnitsError</code> si las dimensiones son incompatibles.</td></tr>
+        <tr><td><code>.__mul__, __truediv__</code></td><td><code>Quantity</code></td><td>Multiplicación y división. Combina dimensiones automáticamente.</td></tr>
+        <tr><td><code>.__pow__(n)</code></td><td><code>Quantity</code></td><td>Potencia. <code>Q_(2, "m") ** 3</code> &rarr; <code>8 m&sup3;</code>.</td></tr>
+        <tr><td><code>.dot(other)</code></td><td><code>Quantity</code></td><td>Producto punto para cantidades vectoriales.</td></tr>
+        <tr><td><code>.cross(other)</code></td><td><code>Quantity</code></td><td>Producto cruz para cantidades vectoriales.</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Métodos de Clase</h4>
+    <table>
+      <thead><tr><th>Método</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>Quantity.from_input(value, unit, ...)</code></td><td>Constructor de bajo nivel. Útil cuando necesitas control explícito del UnitSystem o el Backend.</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Ejemplo</h4>
+    <pre><code>from measurekit import Q_
+
+F = Q_(100, "N")
+A = Q_(0.5, "m^2")
+P = F / A
+
+print(P)           # 200.0 Pa
+print(P.to("kPa")) # 0.2 kPa
+print(P.unit)      # Pa
+print(P.dimension) # [mass·length⁻¹·time⁻²]
+print(P.magnitude) # 200.0 (valor numérico neto)</code></pre>
+  </div>
+
+  <!-- Uncertainty -->
+  <h2 id="uncertainty">Clase Uncertainty</h2>
+  <div class="api-card">
+    <div class="api-signature"><span class="api-kw">class</span> <span class="api-name">Uncertainty</span></div>
+    <p>Clase base abstracta de modelos de incertidumbre física. En el uso cotidiano, pasarás un <code>float</code> a <code>Q_</code>, y MeasureKit gestionará la clase de covarianza de manera transparente en base al modo de propagación.</p>
+    <table>
+      <thead><tr><th>Propiedad / Método</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>.std_dev</code></td><td>La desviación estándar (1&sigma;).</td></tr>
+        <tr><td><code>.variance</code></td><td>La varianza de la cantidad (no siempre disponible directamente — calcular como std_dev²).</td></tr>
+        <tr><td><code>.vector_slice</code></td><td>Índice en la matriz de covarianza global para arrays correlacionados.</td></tr>
+      </tbody>
+    </table>
+    <pre><code>from measurekit import Q_
+
+# Pasa un float como incertidumbre
+q = Q_(9.81, "m/s^2", uncertainty=0.02)
+print(q.uncertainty)       # 0.02 (desv. est.)
+print(q.uncertainty**2)    # ~0.0004 (varianza calculada manualmente)</code></pre>
+  </div>
+
+  <!-- Module Functions -->
+  <h2 id="module-functions">Funciones de Módulo</h2>
+  <p>Estas funciones están disponibles para importar directamente desde <code>measurekit</code>:</p>
+  <table>
+    <thead><tr><th>Función</th><th>Descripción</th></tr></thead>
+    <tbody>
+      {functions.map(f => (
+        <tr>
+          <td><code>{f.name}</code></td>
+          <td>{f.desc}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h3>Ejemplo de propagation_mode</h3>
+  <pre><code>import measurekit as mk
+from measurekit import Q_
+
+# Por defecto el modo es 'correlated' — x - x = 0 exactamente
+x = Q_(5.0, "m", uncertainty=0.1)
+delta = x - x
+print(delta.uncertainty)   # ~0.0  (cancelación de correlación)
+
+# Alternar a modo no correlacionado
+with mk.propagation_mode("uncorrelated"):
+    delta2 = x - x   # 0.0 ± 0.141 m  (los errores se suman en cuadratura)
+
+# Otros modos: "monte_carlo", "unscented"
+with mk.propagation_mode("monte_carlo"):
+    ...</code></pre>
+
+  <!-- Grammar API -->
+  <h2 id="grammar-api">API de Gramática</h2>
+  <p>La clase <code>GrammarInterpreter</code> disponible en <code>measurekit.ext.grammar</code>:</p>
+  <div class="api-card">
+    <div class="api-signature"><span class="api-kw">class</span> <span class="api-name">GrammarInterpreter</span></div>
+    <h4>Métodos</h4>
+    <table>
+      <thead><tr><th>Método</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>.run(source: str) → list</code></td><td>Ejecuta un lote de instrucciones. Retorna una lista con los resultados evaluados (None para asignaciones).</td></tr>
+        <tr><td><code>.eval(expr: str) → Any</code></td><td>Evalúa una sola expresión y retorna el objeto resultante.</td></tr>
+      </tbody>
+    </table>
+    <h4>Sintaxis de la gramática</h4>
+    <table>
+      <thead><tr><th>Sintaxis</th><th>Descripción</th></tr></thead>
+      <tbody>
+        {grammarApi.map(g => (
+          <tr>
+            <td><code>{g.syntax}</code></td>
+            <td>{g.desc}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Exceptions -->
+  <h2 id="exceptions">Excepciones</h2>
+  <table>
+    <thead><tr><th>Excepción</th><th>Causa del lanzamiento</th></tr></thead>
+    <tbody>
+      <tr><td><code>MeasureKitError</code></td><td>Clase base para todas las excepciones del motor MeasureKit.</td></tr>
+      <tr><td><code>IncompatibleUnitsError</code></td><td>Operación aritmética entre dimensiones incompatibles (ej. sumar metros y segundos). Es el error principal en discrepancias dimensionales.</td></tr>
+      <tr><td><code>ConversionError</code></td><td>Fallo al intentar convertir entre dimensiones incompatibles (ej. metros a segundos).</td></tr>
+      <tr><td><code>UnitNotFoundError</code></td><td>Una unidad física no está registrada en el sistema de unidades activo.</td></tr>
+      <tr><td><code>UnknownUnitError</code></td><td>La expresión de unidad no pudo analizarse sintácticamente. Incluye sugerencias tipográficas.</td></tr>
+      <tr><td><code>DimensionError</code></td><td>Operación inválida sobre dimensiones (clase base, lanzada en casos avanzados).</td></tr>
+    </tbody>
+  </table>
+  <div class="api-card callout-warning">
+    <p><strong>Nota:</strong> El error exacto al sumar unidades incompatibles es <code>IncompatibleUnitsError</code>, no <code>DimensionError</code>. Ambos están disponibles para importación.</p>
+  </div>
+  <pre><code>from measurekit import Q_, ConversionError, IncompatibleUnitsError
+
+try:
+    Q_(10, "m").to("s")   # longitud → tiempo: inválido
+except ConversionError as e:
+    print(f"Error de conversión: &#123;e&#125;")
+
+try:
+    Q_(10, "m") + Q_(5, "s")  # dimensiones incompatibles
+except IncompatibleUnitsError as e:
+    print(f"Unidades incompatibles: &#123;e&#125;")</code></pre>
+
+  <!-- Units module -->
+  <h2 id="units-module">Módulo de Unidades</h2>
+  <pre><code>from measurekit import units, get_unit
+
+# Obtener una unidad por su nombre o símbolo
+metro = get_unit("m")
+newton = get_unit("N")
+pascal = get_unit("Pa")
+
+# Inspeccionar características de las unidades
+print(metro.dimension)  # [length]
+print(newton.si_factor) # 1.0 (unidad del SI)
+
+# Creación de CompoundUnit
+from measurekit import CompoundUnit
+unidad_velocidad = CompoundUnit("m/s")</code></pre>
+
+  <div class="callout callout-info">
+    <p>Para ver el catálogo completo de más de 125 unidades y más de 400 constantes físicas de la CODATA 2022, consulta el archivo de referencia de GitHub <a href="https://github.com/Alexisrx96/measurekit/blob/main/docs/UNITS.md" target="_blank" rel="noopener">UNITS.md</a>.</p>
+  </div>
+</DocsLayout>
+
+<style>
+  .toc-card {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text3); margin-bottom: 0.5rem;
+  }
+  .toc-list {
+    list-style: none; padding: 0; columns: 2; gap: 1rem; margin: 0;
+  }
+  .toc-list li { margin-bottom: 0.25rem; }
+  .toc-list a { color: var(--accent2); font-size: 0.875rem; text-decoration: none; }
+  .toc-list a:hover { text-decoration: underline; }
+
+  .api-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .api-signature {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.05rem; margin-bottom: 0.875rem;
+    padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+  }
+  .api-name { color: var(--accent2); font-weight: 600; }
+  .api-args { color: var(--text2); }
+  .api-kw { color: #c792ea; margin-right: 0.35rem; }
+  .api-card h4 { margin-top: 1.25rem; margin-bottom: 0.5rem; color: var(--text3); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .api-card p { margin-bottom: 0.75rem; }
+  .api-card pre { margin-bottom: 0; }
+
+  @media (max-width: 600px) {
+    .toc-list { columns: 1; }
+  }
+</style>

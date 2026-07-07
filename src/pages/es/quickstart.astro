@@ -1,0 +1,181 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Guía Rápida" description="Comienza a usar MeasureKit en menos de 5 minutos" activeSection="quickstart">
+  <div class="page-header">
+    <div class="kicker">Primeros Pasos</div>
+    <h1>Guía Rápida</h1>
+    <p>Comienza a usar MeasureKit en menos de 5 minutos. Desde la instalación hasta tu primer cálculo con unidades seguras.</p>
+  </div>
+
+  <h2>1. Instalación</h2>
+  <pre><code>pip install measurekit</code></pre>
+  <p>O con el núcleo en Rust para un rendimiento superior:</p>
+  <pre><code>pip install "measurekit[native]"</code></pre>
+
+  <h2>2. Tu primera cantidad</h2>
+  <p>
+    El punto de entrada principal es <code>Q_</code> — una factoría que crea objetos <strong>Quantity</strong> 
+    a partir de un valor numérico y una cadena de texto de unidad.
+  </p>
+  <pre><code>from measurekit import Q_
+
+# Crear cantidades físicas
+distancia = Q_(10, "km")      # 10 kilómetros
+tiempo    = Q_(2, "hr")       # 2 horas
+masa      = Q_(75, "kg")      # 75 kilogramos
+
+# La aritmética mantiene las unidades
+velocidad = distancia / tiempo
+print(velocidad)            # 5.0 km/hr
+
+# Convertir a cualquier unidad compatible
+print(velocidad.to("m/s"))  # 1.3888888888888888 m/s</code></pre>
+
+  <h2>3. Seguridad de unidades</h2>
+  <p>MeasureKit se niega a operar con dimensiones incompatibles y lanza un error detallado:</p>
+  <pre><code>from measurekit import Q_
+
+d = Q_(10, "m")   # longitud
+t = Q_(5, "s")    # tiempo
+
+# Esto funciona — la división produce velocidad
+v = d / t         # 2.0 m/s
+
+# Esto lanza IncompatibleUnitsError
+d + t             # ❌ IncompatibleUnitsError: Cannot operate with incompatible units</code></pre>
+
+  <h2>4. Conversión de unidades</h2>
+  <p>Usa <code>.to()</code> para realizar conversiones entre unidades compatibles:</p>
+  <pre><code>from measurekit import Q_
+
+# Conversiones de longitud
+longitud = Q_(1, "mi")              # 1 milla
+print(longitud.to("km"))            # 1.609344 km
+print(longitud.to("m"))             # 1609.344 m
+print(longitud.to("ft"))            # 5280.0 ft
+
+# Temperatura (con soporte para offsets)
+temp_c = Q_(100, "degC")
+print(temp_c.to("degF"))            # 212.0 °F
+print(temp_c.to("K"))               # 373.15 K
+
+# Energía
+energia = Q_(1, "kWh")
+print(energia.to("J"))              # 3600000.0 J
+print(energia.to("MJ"))             # 3.6 MJ</code></pre>
+
+  <h2>5. Propagación de incertidumbre</h2>
+  <p>Pasa un argumento <code>uncertainty</code> para realizar el seguimiento del error de medición:</p>
+  <pre><code>from measurekit import Q_
+
+# Con incertidumbre (desviación estándar)
+g = Q_(9.81, "m/s^2", uncertainty=0.02)
+m = Q_(5.0,  "kg",    uncertainty=0.1)
+
+# Los errores se propagan automáticamente
+F = g * m
+print(F)              # Cantidad física con valor e incertidumbre
+print(F.magnitude)    # 49.05
+print(F.uncertainty)  # ~0.99 N
+
+# Incertidumbre correlacionada: x - x es exactamente 0
+# (requiere el modo predeterminado 'correlated')
+x = Q_(5.0, "m", uncertainty=0.1)
+delta = x - x     # 0.0 ± 0.0 m  ✓ en modo correlacionado (por defecto)</code></pre>
+
+  <div class="callout callout-info">
+    <p><strong>El modo por defecto es correlacionado:</strong> MeasureKit utiliza por defecto la propagación de tipo <code>"correlated"</code>, de modo que x − x = 0 exactamente. Puedes cambiarlo con el gestor de contexto <a href="/es/guide#covariance"><code>propagation_mode</code></a>.</p>
+  </div>
+
+  <h2>6. Notación de gramática</h2>
+  <p>Escribe física tal como lo harías en papel con <code>GrammarInterpreter</code>:</p>
+  <pre><code>from measurekit.ext.grammar import GrammarInterpreter
+
+mn = GrammarInterpreter()
+mn.run("""
+force = 500 N
+area  = 2 m^2
+stress = force / area
+""")
+
+# Consultar resultados
+print(mn.eval("stress => kPa"))      # 0.25 kPa
+print(mn.eval("stress == 250 Pa"))   # True
+
+# Literales de incertidumbre
+mn.run("g = 9.81 +/- 0.02 m/s^2")
+print(mn.eval("g = ?"))              # 9.81 ± 0.02 m/s^2</code></pre>
+
+  <h2>7. Calculadora de consola</h2>
+  <p>Usa MeasureKit directamente en la consola sin necesidad de escribir un script en Python:</p>
+  <pre><code># Evaluar una expresión simple
+python -m measurekit "500 N / 2 m^2 => kPa"
+# Salida: 0.25 kPa
+
+# Evaluar un archivo con instrucciones
+python -m measurekit < notas.mnml
+
+# REPL interactivo (Ctrl+D para salir)
+python -m measurekit
+mk> g = 9.81 +/- 0.02 m/s^2
+mk> g => ft/s^2
+32.185... ft/s^2
+mk> exit</code></pre>
+
+  <h2>8. NumPy / PyTorch / JAX</h2>
+  <p>Pasa tensores o arrays como valor y MeasureKit auto-detectará el backend:</p>
+  <pre><code>import numpy as np
+import torch
+from measurekit import Q_
+
+# Auto-detección del backend NumPy
+arr = Q_(np.array([1.0, 2.0, 3.0]), "m")
+print(arr.to("cm"))    # [100. 200. 300.] cm
+
+# Con PyTorch
+t = Q_(torch.tensor([9.81, 9.80, 9.82]), "m/s^2")
+print(t.to("ft/s^2"))  # tensor([32.185..., 32.152..., 32.218...])</code></pre>
+
+  <h2>Siguientes pasos</h2>
+  <div class="card-grid next-cards">
+    <a href="/es/guide" class="card next-card">
+      <div class="next-icon">📖</div>
+      <h3>Guía de Usuario</h3>
+      <p>Profundiza en todas las características: backends, covarianza, JIT y más.</p>
+    </a>
+    <a href="/es/api" class="card next-card">
+      <div class="next-icon">🔧</div>
+      <h3>Referencia API</h3>
+      <p>Referencia completa de Quantity, unidades, conversión y la API pública.</p>
+    </a>
+    <a href="/es/examples" class="card next-card">
+      <div class="next-icon">🧪</div>
+      <h3>Ejemplos</h3>
+      <p>Ejemplos reales de física: cinemática, temperaturas, dinámica de fluidos y más.</p>
+    </a>
+    <a href="/es/cli" class="card next-card">
+      <div class="next-icon">💻</div>
+      <h3>CLI y REPL</h3>
+      <p>Usa MeasureKit en tu terminal para realizar verificaciones rápidas de unidades.</p>
+    </a>
+  </div>
+</DocsLayout>
+
+<style>
+  .next-cards { margin-top: 1.5rem; }
+  .next-card {
+    text-decoration: none; display: block;
+    transition: border-color 0.2s, transform 0.15s;
+    cursor: pointer;
+  }
+  .next-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+  .next-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+  .next-card h3 { margin-top: 0; font-size: 1rem; color: var(--text); }
+  .next-card p { margin: 0; font-size: 0.875rem; }
+</style>

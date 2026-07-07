@@ -1,0 +1,371 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+
+const TITLE = "Inicio";
+const DESCRIPTION = "MeasureKit — Computación física con validación de unidades para Python. Sin dependencias de ejecución, núcleo opcional en Rust y tensores multi-backend.";
+---
+
+<DocsLayout title={TITLE} description={DESCRIPTION} activeSection="overview">
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="badge badge-green">Beta</span>
+      <span>v0.1.8 · Licencia MIT · Python 3.10+</span>
+    </div>
+    <img src="/logo.jpg" alt="Logo de MeasureKit" width="100" height="100" class="hero-logo" />
+    <h1>MeasureKit</h1>
+    <p class="hero-lead">
+      Cálculos físicos con validación de unidades para Python. Adjunta unidades físicas a números, 
+      matrices de NumPy, tensores de PyTorch y arrays de JAX — y deja que el motor te mantenga honesto.
+    </p>
+    <div class="hero-install">
+      <div class="install-cmd">
+        <span class="prompt">$</span>
+        <code>pip install measurekit</code>
+        <button class="copy-btn-hero" data-copy="pip install measurekit" title="Copiar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+    </div>
+    <div class="hero-links">
+      <a href="/es/quickstart" class="btn-primary">Comenzar →</a>
+      <a href="/es/install" class="btn-secondary">Opciones de Instalación</a>
+      <a href="https://github.com/Alexisrx96/measurekit" target="_blank" rel="noopener" class="btn-ghost">GitHub</a>
+    </div>
+  </div>
+
+  <!-- Quick Demo -->
+  <section class="demo-section">
+    <h2>Míralo en acción</h2>
+    <div class="demo-grid">
+      <div class="demo-card">
+        <div class="demo-label">Python API</div>
+        <pre><code><span class="kw">from</span> measurekit <span class="kw">import</span> Q_
+
+<span class="cm"># Aritmética segura con unidades</span>
+d = Q_(10, <span class="str">"km"</span>)
+t = Q_(2, <span class="str">"hr"</span>)
+v = d / t
+
+<span class="fn">print</span>(v.to(<span class="str">"m/s"</span>))  <span class="cm"># 1.3888... m/s</span>
+d + t            <span class="cm"># ❌ lanza: length + time</span></code></pre>
+      </div>
+      <div class="demo-card">
+        <div class="demo-label">Gramática / REPL</div>
+        <pre><code><span class="cm"># Notación natural como en papel</span>
+force = 500 N
+area  = 2 m^2
+stress = force / area
+
+stress =&gt; kPa      <span class="cm"># 0.25 kPa</span>
+stress == 250 Pa   <span class="cm"># True</span></code></pre>
+      </div>
+      <div class="demo-card">
+        <div class="demo-label">Propagación de Incertidumbre</div>
+        <pre><code><span class="kw">from</span> measurekit <span class="kw">import</span> Q_
+
+g = Q_(9.81, <span class="str">"m/s^2"</span>, uncertainty=0.02)
+m = Q_(5.0,  <span class="str">"kg"</span>,    uncertainty=0.1)
+
+F = g * m
+<span class="cm"># F = 49.05 ± 0.99 N</span></code></pre>
+      </div>
+      <div class="demo-card">
+        <div class="demo-label">Calculadora de Terminal</div>
+        <pre><code><span class="prompt">$</span> python -m measurekit <span class="str">"500 N / 2 m^2 =&gt; kPa"</span>
+0.25 kPa
+
+<span class="prompt">$</span> python -m measurekit
+<span class="prompt">mk&gt;</span> g = 9.81 +/- 0.02 m/s^2
+<span class="prompt">mk&gt;</span> g =&gt; ft/s^2
+32.185... ft/s^2</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- What is MeasureKit -->
+  <section>
+    <h2>¿Qué es MeasureKit?</h2>
+    <p>
+      MeasureKit nació como "El Validador de Tareas Sobrediseñado" — un desarrollador que quería 
+      verificar ejercicios de física y, en su lugar, construyó un <strong>motor de dimensiones independiente 
+      del backend y compilable con JIT</strong>. Aplica patrones de arquitectura empresarial al manejo de unidades, 
+      brindando seguridad y expresividad típicamente reservadas para entornos de investigación.
+    </p>
+    <p>
+      A diferencia de Pint (que es excelente y está sumamente probado), MeasureKit se enfoca específicamente en:
+    </p>
+    <ul>
+      <li>Seguridad de unidades compilable con JIT en **tensores de PyTorch y JAX**</li>
+      <li>**Propagación de incertidumbre correlacionada** con un almacén de covarianza completo</li>
+      <li>**Instalación base sin dependencias** — solo requiere Python 3.10+</li>
+      <li>Una **gramática de lenguaje natural** para escribir física tal como se haría en papel</li>
+    </ul>
+  </section>
+
+  <!-- Features Grid -->
+  <section>
+    <h2>Características</h2>
+    <div class="card-grid">
+      <div class="card feat-card">
+        <div class="feat-icon">📐</div>
+        <h3>Análisis Dimensional</h3>
+        <p>Rastreo automático de unidades en toda la aritmética. Las operaciones inválidas (metros + segundos) lanzan errores claros.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">🔢</div>
+        <h3>Tensores Multi-Backend</h3>
+        <p>Los backends de NumPy, PyTorch y JAX se seleccionan automáticamente a partir del tipo de valor ingresado.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">📊</div>
+        <h3>Propagación de Incertidumbre</h3>
+        <p>Propagación de error independiente y correlacionada. Un almacén de covarianza rastrea correlaciones para que x − x = 0 exactamente.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">⚡</div>
+        <h3>Compilación JIT</h3>
+        <p>Validación de unidades al trazar el grafo, tensores puros en ejecución. Menos de 1.1× de overhead vs PyTorch puro con torch.compile.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">🦀</div>
+        <h3>Núcleo Opcional en Rust</h3>
+        <p>measurekit-core (mediante PyO3) acelera el álgebra de unidades. Todas las rutas de código tienen fallback puro en Python.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">✍️</div>
+        <h3>Gramática y REPL</h3>
+        <p>Escribe <code>force = 500 N</code> en Python, archivos, o de manera interactiva — como GNU units con propagación de errores.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">🔍</div>
+        <h3>Tipado Estático</h3>
+        <p>El plugin de mypy infiere tipos literales de unidades en <code>Q_(v, "m/s")</code>. Integraciones para Pandas y Pydantic incluidas.</p>
+      </div>
+      <div class="card feat-card">
+        <div class="feat-icon">📚</div>
+        <h3>Más de 125 Unidades y 400 Constantes</h3>
+        <p>28 dimensiones físicas, 24 prefijos del SI y más de 400 constantes físicas de la CODATA 2022 integradas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section>
+    <h2>En números</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-big">0</div>
+        <div class="stat-desc">dependencias en tiempo de ejecución (instalación base)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">125+</div>
+        <div class="stat-desc">unidades en 28 dimensiones</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">400+</div>
+        <div class="stat-desc">constantes físicas de CODATA 2022</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">&lt;1.1×</div>
+        <div class="stat-desc">overhead frente a PyTorch puro (compilado)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">80%+</div>
+        <div class="stat-desc">cobertura de pruebas (CI-gated)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-big">3.10–3.14</div>
+        <div class="stat-desc">versiones de Python soportadas</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Honest Performance -->
+  <section>
+    <h2>Rendimiento Real</h2>
+    <p>La mayoría de librerías prometen "cero overhead". Esto es lo que significa en MeasureKit:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Modo</th>
+          <th>Velocidad</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Eager (Python estándar)</strong></td>
+          <td><span class="badge badge-yellow">10–100× más lento</span></td>
+          <td>Instanciación de objetos de Python y validación de unidades. Útil para verificar datos, no para bucles intensivos.</td>
+        </tr>
+        <tr>
+          <td><strong>Compilado (torch.compile / jax.jit)</strong></td>
+          <td><span class="badge badge-green">&lt;1.1× de overhead</span></td>
+          <td>Las unidades se validan al trazar el grafo y se eliminan del grafo compilado. El verdadero "cero overhead".</td>
+        </tr>
+        <tr>
+          <td><strong>Con núcleo de Rust</strong></td>
+          <td><span class="badge badge-blue">Aceleración Eager</span></td>
+          <td>Optimiza el modo eager escalar. Cruzar la frontera Python–Rust aún conlleva un coste.</td>
+        </tr>
+        <tr>
+          <td><strong>Primer import</strong></td>
+          <td>~0.5 s</td>
+          <td>Límite controlado en CI. No incluye el arranque de torch ni scipy.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2>¿Listo para comenzar?</h2>
+    <p>Ve a la Guía Rápida para tener MeasureKit funcionando en menos de 5 minutos.</p>
+    <div class="cta-actions">
+      <a href="/es/quickstart" class="btn-primary">Guía Rápida →</a>
+      <a href="/es/install" class="btn-secondary">Opciones de Instalación</a>
+    </div>
+  </section>
+</DocsLayout>
+
+<style>
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 2rem 0 3rem;
+    margin-bottom: 1rem;
+  }
+  .hero-badge {
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    color: var(--text3); font-size: 0.8rem; margin-bottom: 1.25rem;
+  }
+  .hero-logo {
+    border-radius: 16px;
+    border: 1px solid var(--border2);
+    margin-bottom: 1.25rem;
+    display: block;
+    margin-inline: auto;
+  }
+  .hero h1 {
+    font-size: 2.75rem; margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #e2e8f0, #a5b4fc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    border: none;
+  }
+  .hero-lead {
+    font-size: 1.1rem; max-width: 600px; margin: 0 auto 1.75rem;
+    color: var(--text2);
+  }
+  .hero-install { margin-bottom: 1.5rem; }
+  .install-cmd {
+    display: inline-flex; align-items: center; gap: 0.75rem;
+    background: var(--panel); border: 1px solid var(--border2);
+    border-radius: var(--radius-lg); padding: 0.75rem 1.25rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+  }
+  .prompt { color: var(--text3); }
+  .install-cmd code { color: var(--accent2); }
+  .copy-btn-hero {
+    background: none; border: none; cursor: pointer; color: var(--text3);
+    transition: color 0.2s; display: flex; align-items: center;
+  }
+  .copy-btn-hero:hover { color: var(--text); }
+  .hero-links { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+  .btn-primary {
+    background: var(--accent); color: white;
+    padding: 0.6rem 1.4rem; border-radius: var(--radius);
+    font-weight: 600; text-decoration: none; font-size: 0.9rem;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); text-decoration: none; }
+  .btn-secondary {
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border2);
+    padding: 0.6rem 1.4rem; border-radius: var(--radius);
+    font-weight: 500; text-decoration: none; font-size: 0.9rem;
+    transition: border-color 0.2s; display: inline-block;
+  }
+  .btn-secondary:hover { border-color: var(--accent); text-decoration: none; }
+  .btn-ghost {
+    color: var(--text2); padding: 0.6rem 1.4rem;
+    border-radius: var(--radius); font-size: 0.9rem;
+    text-decoration: none; transition: color 0.2s;
+    display: inline-block;
+  }
+  .btn-ghost:hover { color: var(--text); text-decoration: none; }
+
+  /* Demo */
+  .demo-section h2 { margin-top: 0; }
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem; margin: 1rem 0;
+  }
+  .demo-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  .demo-label {
+    background: var(--panel2); border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600;
+    color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .demo-card pre {
+    margin: 0; border: none; border-radius: 0;
+    background: transparent; padding: 1rem 1.25rem;
+  }
+  .kw { color: #c792ea; }
+  .str { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; }
+  .fn { color: #82aaff; }
+  .prompt { color: var(--text3); }
+
+  /* Features */
+  .feat-card h3 { margin-top: 0.5rem; margin-bottom: 0.35rem; font-size: 1rem; }
+  .feat-card p { margin: 0; font-size: 0.875rem; }
+  .feat-icon { font-size: 1.5rem; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem; margin: 1rem 0;
+  }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem;
+    text-align: center;
+  }
+  .stat-big {
+    font-size: 1.75rem; font-weight: 700; color: var(--accent2);
+    margin-bottom: 0.25rem;
+  }
+  .stat-desc { font-size: 0.8rem; color: var(--text3); }
+
+  /* CTA */
+  .cta-section {
+    background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(129,140,248,0.04));
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: var(--radius-lg); padding: 2rem;
+    text-align: center; margin-top: 3rem;
+  }
+  .cta-section h2 { border: none; margin-top: 0; }
+  .cta-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+</style>
+
+<script>
+  document.querySelectorAll('.copy-btn-hero').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.getAttribute('data-copy') || '';
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓';
+        setTimeout(() => { btn.innerHTML = original; }, 2000);
+      });
+    });
+  });
+</script>

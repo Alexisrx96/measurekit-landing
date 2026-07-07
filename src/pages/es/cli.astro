@@ -1,0 +1,209 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="CLI y REPL" description="Usa MeasureKit desde la terminal como una calculadora física adaptada a unidades" activeSection="cli">
+  <div class="page-header">
+    <div class="kicker">Herramientas</div>
+    <h1>CLI y REPL</h1>
+    <p>Usa MeasureKit directamente desde tu terminal sin necesidad de escribir scripts en Python. Como GNU <code>units</code>, pero con propagación de incertidumbres.</p>
+  </div>
+
+  <h2>Tres modos de uso</h2>
+  <div class="mode-grid">
+    <div class="mode-card">
+      <div class="mode-num">1</div>
+      <h3>Evaluación simple</h3>
+      <p>Pasa una expresión física como argumento de la línea de comandos. Se evalúa y finaliza inmediatamente.</p>
+      <pre><code>python -m measurekit "500 N / 2 m^2 => kPa"
+# 0.25 kPa</code></pre>
+    </div>
+    <div class="mode-card">
+      <div class="mode-num">2</div>
+      <h3>Evaluación de archivos</h3>
+      <p>Envía por tubería un archivo con declaraciones en MeasureNote. Todos los resultados se imprimen en secuencia.</p>
+      <pre><code>python -m measurekit &lt; notas.mnml</code></pre>
+    </div>
+    <div class="mode-card">
+      <div class="mode-num">3</div>
+      <h3>REPL Interactivo</h3>
+      <p>Inicia una sesión interactiva en la consola. Conserva el historial de comandos. Sal del intérprete con Ctrl+D.</p>
+      <pre><code>python -m measurekit
+mk&gt; ...</code></pre>
+    </div>
+  </div>
+
+  <h2>Ejemplos rápidos</h2>
+  <pre><code># Conversiones de unidad
+python -m measurekit "60 mph => km/hr"
+# 96.5606 km/hr
+
+python -m measurekit "1 atm => kPa"
+# 101.325 kPa
+
+python -m measurekit "100 degC => degF"
+# 212.0 degF
+
+# Aritmética dimensional
+python -m measurekit "9.81 m/s^2 * 70 kg => N"
+# 686.7 N
+
+python -m measurekit "1 kWh => MJ"
+# 3.6 MJ
+
+# Con literales de incertidumbre
+python -m measurekit "9.81 +/- 0.02 m/s^2 => ft/s^2"
+# 32.185 ± 0.066 ft/s^2</code></pre>
+
+  <h2>Sesión del REPL</h2>
+  <pre><code>$ python -m measurekit
+measurekit — unit-aware calculator. Try `500 N / 2 m^2 => kPa`; exit with Ctrl-D.
+
+mk&gt; g = 9.81 +/- 0.02 m/s^2
+mk&gt; m = 70 kg
+mk&gt; F = g * m
+mk&gt; F => N
+686.7 ± 1.4 N
+
+mk&gt; v = 100 km/hr
+mk&gt; v => m/s
+27.7778 m/s
+
+mk&gt; stress = 500 N / 2 m^2
+mk&gt; stress => kPa
+0.25 kPa
+
+mk&gt; stress == 250 Pa
+True
+
+mk&gt; exit</code></pre>
+
+  <h2>Subcomandos de Consola</h2>
+  <p>También disponible a través del comando global <code>measurekit</code> instalado por pip:</p>
+  <pre><code># Tras ejecutar pip install measurekit:
+measurekit repl                          # Inicia el REPL interactivo
+measurekit repl "500 N / 2 m^2 => kPa"  # Evalúa una única expresión
+measurekit sync-types                    # Regenera los archivos stub de tipado estático</code></pre>
+
+  <h2>Sintaxis de MeasureNote</h2>
+  <p>El REPL y los scripts de consola utilizan la sintaxis de MeasureNote (MNML):</p>
+  <table>
+    <thead>
+      <tr><th>Sintaxis</th><th>Ejemplo</th><th>Descripción</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>nombre = valor unidad</code></td>
+        <td><code>force = 500 N</code></td>
+        <td>Asigna una cantidad a una variable.</td>
+      </tr>
+      <tr>
+        <td><code>nombre -&gt; valor unidad</code></td>
+        <td><code>mass -&gt; 70 kg</code></td>
+        <td>Sintaxis de asignación alternativa.</td>
+      </tr>
+      <tr>
+        <td><code>expr =&gt; unidad</code></td>
+        <td><code>force =&gt; kN</code></td>
+        <td>Evalúa, convierte a la unidad destino e imprime.</td>
+      </tr>
+      <tr>
+        <td><code>expr == valor unidad</code></td>
+        <td><code>stress == 250 Pa</code></td>
+        <td>Aseveración lógica de igualdad. Imprime True o False.</td>
+      </tr>
+      <tr>
+        <td><code>nombre = ?</code></td>
+        <td><code>g = ?</code></td>
+        <td>Consulta e imprime el valor e incertidumbre actual de la variable.</td>
+      </tr>
+      <tr>
+        <td><code>valor +/- inc unidad</code></td>
+        <td><code>9.81 +/- 0.02 m/s^2</code></td>
+        <td>Literal de cantidad con incertidumbre explícita.</td>
+      </tr>
+      <tr>
+        <td><code>a op b</code></td>
+        <td><code>force / area</code></td>
+        <td>Operadores aritméticos estándar: +, -, *, /, ^</td>
+      </tr>
+      <tr>
+        <td><code># comentario</code></td>
+        <td><code># esta línea se ignora</code></td>
+        <td>Comentario de línea.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Escribir archivos de notas</h2>
+  <p>Crea archivos con la extensión <code>.mnml</code> y envíalos por tubería a MeasureKit:</p>
+  <pre><code># notas.mnml — análisis de circuito
+V  = 24 V
+R1 = 100 Ω
+R2 = 150 Ω
+
+# Resistencia en paralelo
+R_p = 1 / (1/R1 + 1/R2)
+
+# Corriente total
+I = V / R_p
+
+# Potencia disipada
+P = V * I
+
+I => mA
+P => W</code></pre>
+  <pre><code>python -m measurekit &lt; notas.mnml
+# 96.0 mA
+# 2.304 W</code></pre>
+
+  <h2>Consejos prácticos</h2>
+  <div class="tips-grid">
+    <div class="card tip-card">
+      <h3>🚀 Tiempo de arranque</h3>
+      <p>La primera evaluación tarda alrededor de ~0.5 s debido al arranque del sistema. Las evaluaciones subsecuentes dentro de la sesión son inmediatas.</p>
+    </div>
+    <div class="card tip-card">
+      <h3>📋 Historial</h3>
+      <p>El REPL utiliza la librería readline si está disponible. La navegación por comandos anteriores con flechas e historial mediante Ctrl+R funcionan de forma nativa.</p>
+    </div>
+    <div class="card tip-card">
+      <h3>🔗 Tuberías (Piping)</h3>
+      <p>MeasureKit detecta si stdin es un TTY o una redirección. La entrada por tubería ejecuta los comandos secuencialmente sin imprimir prompts.</p>
+    </div>
+    <div class="card tip-card">
+      <h3>⚠️ Caracteres especiales</h3>
+      <p>Determinados caracteres especiales (como <code>^</code> o <code>&gt;</code>) pueden ser interpretados por la shell de comandos. Se recomienda envolverlos entre comillas: <code>"m^2"</code>, <code>"=&gt;"</code>.</p>
+    </div>
+  </div>
+</DocsLayout>
+
+<style>
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem; margin: 1.5rem 0;
+  }
+  .mode-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem;
+  }
+  .mode-num {
+    width: 28px; height: 28px;
+    background: var(--accent-glow); border: 1px solid var(--accent);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--accent2); font-size: 0.8rem; font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+  .mode-card h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+  .mode-card p { margin-bottom: 0.75rem; font-size: 0.875rem; }
+  .mode-card pre { margin: 0; }
+
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem; margin: 1rem 0;
+  }
+  .tip-card h3 { margin-top: 0; font-size: 0.95rem; }
+  .tip-card p { margin: 0; font-size: 0.875rem; }
+</style>

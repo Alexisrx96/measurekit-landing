@@ -1,0 +1,491 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Guía de Usuario" description="Guía técnica exhaustiva de las características de MeasureKit: backends, propagación de incertidumbre, matemáticas simbólicas y compilación JIT" activeSection="guide">
+  <div class="page-header">
+    <div class="kicker">Documentación</div>
+    <h1>Guía de Usuario</h1>
+    <p>Una inmersión técnica exhaustiva en MeasureKit — desde las dimensiones físicas hasta los grafos de compilación de tensores de alto rendimiento.</p>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc-card">
+    <p class="toc-label">En esta página</p>
+    <ul class="toc-list">
+      <li><a href="#quantities">1. Creación de Cantidades y Atajos</a></li>
+      <li><a href="#systems">2. Sistemas de Unidades y Contextos</a></li>
+      <li><a href="#arithmetic">3. Aritmética y Desplazamientos de Temperatura</a></li>
+      <li><a href="#transcendentals">4. Funciones Trigonométricas y Trascendentales</a></li>
+      <li><a href="#uncertainty">5. Detalles de Propagación de Incertidumbre</a></li>
+      <li><a href="#covariance">6. Incertidumbre Correlacionada y Almacén de Covarianza</a></li>
+      <li><a href="#functional">7. API Funcional sin Estado para JAX</a></li>
+      <li><a href="#backends">8. Multi-Backend y Carga Perezosa</a></li>
+      <li><a href="#jit">9. Compilación JIT y Trazado Sin Overhead</a></li>
+      <li><a href="#symbolic">10. Matemática Simbólica y Resolución de Ecuaciones</a></li>
+      <li><a href="#pandas">11. Extensiones y Accesores de Pandas</a></li>
+      <li><a href="#io">12. HDF5, xarray y Serialización de Estado</a></li>
+    </ul>
+  </div>
+
+  <!-- 1. Quantities & Shorthands -->
+  <section class="guide-section">
+    <h2 id="quantities">1. Creación de Cantidades y Atajos</h2>
+    <p>
+      Una <code>Quantity</code> representa una cantidad física. Agrupa un valor numérico (magnitud), una <code>CompoundUnit</code> y una desviación estándar opcional (incertidumbre). Puedes instanciar cantidades de tres formas:
+    </p>
+
+    <h3>A. La Factoría de Cantidades (<code>Q_</code>)</h3>
+    <pre><code>from measurekit import Q_
+
+# Construcción estándar valor-unidad
+q1 = Q_(10, "m/s")
+
+# Construcción a partir del análisis de cadena (valor y unidad)
+q2 = Q_("9.81 m/s^2")
+
+# Construcción con desviación estándar
+q3 = Q_(100, "degC", uncertainty=0.5)
+
+# Construcción con un nombre simbólico de trazado
+q4 = Q_(2.5, "kg", symbol="mass")</code></pre>
+
+    <h3>B. Azúcar Sintáctico (Singletons de Unidad)</h3>
+    <p>
+      MeasureKit genera objetos de unidad estáticos en <code>measurekit.units.core</code>. La multiplicación por el lado derecho en estos objetos devuelve una <code>Quantity</code>:
+    </p>
+    <pre><code>from measurekit.units.core import m, s, kg
+
+# Azúcar sintáctico para la creación de cantidades
+speed = 10 * m / s
+force = 5.0 * kg * m / s**2
+
+print(speed)              # (10.0) m/s
+print(type(speed))        # &lt;class 'measurekit.domain.measurement.quantity.Quantity'&gt;</code></pre>
+
+    <h3>C. Factorías Especializadas</h3>
+    <p>
+      Si estás creando muchas cantidades de la misma unidad, puedes obtener una factoría especializada mediante una búsqueda de diccionario:
+    </p>
+    <pre><code># Crear una factoría vinculada a "m/s^2"
+accel_factory = Q_["m/s^2"]
+
+a1 = accel_factory(9.81)
+a2 = accel_factory(1.5, uncertainty=0.01)</code></pre>
+
+    <h3>D. Atributos y Alias</h3>
+    <p>
+      Las cantidades están optimizadas para evitar el overhead de Python siempre que sea posible:
+    </p>
+    <ul>
+      <li><code>.magnitude</code> (alias <code>.m</code>): Accede al valor numérico bruto (escalar o tensor).</li>
+      <li><code>.unit</code> (alias <code>.u</code>): Devuelve la representación <code>CompoundUnit</code>.</li>
+      <li><code>.uncertainty</code>: Devuelve la desviación estándar (1&sigma;), por defecto es <code>0.0</code>.</li>
+      <li><code>.dimension</code>: Devuelve la firma de la dimensión física (ej. <code>[length]</code>).</li>
+    </ul>
+  </section>
+
+  <!-- 2. Unit Systems & Contexts -->
+  <section class="guide-section">
+    <h2 id="systems">2. Sistemas de Unidades y Contextos</h2>
+    <p>
+      MeasureKit resuelve las unidades contra un <code>UnitSystem</code> construido a partir de archivos de configuración (como <code>measurekit.conf</code>, <code>international.conf</code> o <code>imperial.conf</code>). Este contiene las definiciones para dimensiones, prefijos, unidades y constantes.
+    </p>
+    <p>
+      Puedes crear e intercambiar sistemas de unidades de forma segura para hilos y tareas asíncronas utilizando un gestor de contexto:
+    </p>
+    <pre><code>import measurekit as mk
+from measurekit import Q_, system_context
+
+# El sistema por defecto es el SI (internacional)
+q_si = Q_(1, "ft")
+print(q_si.to("m"))  # 0.3048 m
+
+# Cambiar temporalmente el sistema activo
+with system_context("imperial.conf"):
+    # Dentro de este contexto, se aplican las unidades base imperiales
+    q_imp = Q_(1.0, "m")
+    print(q_imp.to("ft"))  # 3.28084 ft</code></pre>
+  </section>
+
+  <!-- 3. Arithmetic & Temperature Offsets -->
+  <section class="guide-section">
+    <h2 id="arithmetic">3. Aritmética y Desplazamientos de Temperatura</h2>
+    <p>
+      MeasureKit impone una estricta compatibilidad de unidades. Realizar operaciones aritméticas entre dimensiones incompatibles lanza un <code>IncompatibleUnitsError</code>.
+    </p>
+    <pre><code>from measurekit import Q_, IncompatibleUnitsError
+
+d = Q_(10, "m")
+t = Q_(2, "s")
+
+try:
+    d + t
+except IncompatibleUnitsError as e:
+    print(f"Lanzó: &#123;e&#125;")  # Cannot operate with incompatible units: 'm' and 's'</code></pre>
+
+    <h3>Temperaturas Absolutas vs. Diferencias (Delta)</h3>
+    <p>
+      Las unidades de temperatura con desplazamientos (como Celsius y Fahrenheit) requieren un manejo físico cuidadoso:
+    </p>
+    <ul>
+      <li><strong>Unidades absolutas</strong> (<code>degC</code>, <code>degF</code>, <code>K</code>) representan puntos termodinámicos específicos.</li>
+      <li><strong>Unidades delta</strong> (<code>delta_degC</code>, <code>delta_degF</code>) representan diferencias de temperatura.</li>
+    </ul>
+    <p>
+      MeasureKit maneja automáticamente las conversiones aritméticas absolutas/delta:
+    </p>
+    <pre><code># Restar dos temperaturas absolutas produce una unidad DELTA:
+t1 = Q_(100, "degC")
+t2 = Q_(90, "degC")
+diff = t1 - t2
+print(diff)                  # (10.0) delta_degC
+
+# Sumar un delta a una temperatura absoluta produce una temperatura absoluta:
+t_final = t2 + Q_(15, "delta_degC")
+print(t_final)               # (105.0) degC
+
+# Intentar sumar dos temperaturas absolutas carece de sentido físico y lanza un error:
+try:
+    t1 + t2
+except IncompatibleUnitsError:
+    print("¡Se evitó una operación físicamente sin sentido!")</code></pre>
+  </section>
+
+  <!-- 4. Trigonometric & Transcendental Functions -->
+  <section class="guide-section">
+    <h2 id="transcendentals">4. Funciones Trigonométricas y Trascendentales</h2>
+    <p>
+      MeasureKit define métodos trigonométricos y trascendentales en la clase <code>Quantity</code>. Estos garantizan la consistencia física:
+    </p>
+    <ul>
+      <li>El argumento de la función debe ser adimensional o un ángulo.</li>
+      <li>Los ángulos puros (como <code>degree</code>) se convierten automáticamente a <code>radian</code> (el ángulo adimensional del SI) antes del cálculo.</li>
+      <li>Los compuestos adimensionales (como <code>m/km</code>) se colapsan a su factor de escala.</li>
+      <li>Cualquier otra dimensión lanza un <code>DimensionError</code>.</li>
+      <li>El valor de retorno es siempre una cantidad adimensional (sin unidades).</li>
+    </ul>
+    <pre><code>from measurekit import Q_, DimensionError
+import math
+
+# Ángulo automáticamente convertido a radianes
+angle = Q_(90, "degree")
+print(angle.sin())            # (1.0) 1  (unidad adimensional)
+
+# Relación adimensional colapsada
+ratio = Q_(10, "m") / Q_(1, "km") # 0.01 m/m
+print(ratio.exp())            # (1.01005) 1
+
+# Si no es adimensional, lanza DimensionError
+try:
+    Q_(5, "m").log()
+except DimensionError as e:
+    print(f"Fallo de verificación de dimensión: &#123;e&#125;")</code></pre>
+    <p>
+      Funciones soportadas: <code>.sin()</code>, <code>.cos()</code>, <code>.tan()</code>, <code>.exp()</code>, <code>.log()</code>, <code>.tanh()</code>.
+    </p>
+  </section>
+
+  <!-- 5. Uncertainty Propagation Details -->
+  <section class="guide-section">
+    <h2 id="uncertainty">5. Detalles de Propagación de Incertidumbre</h2>
+    <p>
+      Las incertidumbres se propagan automáticamente mediante la expansión en serie de Taylor de primer orden (reglas del cálculo). La estrategia de propagación se adapta al modo activo en <code>uncertainty_mode</code>:
+    </p>
+    <table>
+      <thead>
+        <tr><th>Modo</th><th>Método</th><th>Descripción</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>"python"</code> / <code>"gaussian"</code></td>
+          <td>Analítico / Autograd</td>
+          <td>Calcula derivadas de forma exacta (por defecto para la ejecución estándar en Python/NumPy).</td>
+        </tr>
+        <tr>
+          <td><code>"monte_carlo"</code></td>
+          <td>Muestreo Estocástico</td>
+          <td>Propaga la incertidumbre extrayendo muestras de distribuciones. (Por defecto 1000 muestras, configurable).</td>
+        </tr>
+        <tr>
+          <td><code>"unscented"</code></td>
+          <td>Transformada Unscented</td>
+          <td>Propaga la incertidumbre utilizando puntos sigma (muestreo determinista).</td>
+        </tr>
+      </tbody>
+    </table>
+    <pre><code>import measurekit as mk
+from measurekit import Q_
+
+# Ejecución en modo Monte Carlo
+with mk.uncertainty_mode("monte_carlo", samples=10000):
+    x = Q_(10.0, "m", uncertainty=1.0)
+    y = x ** 2
+    print(f"Media: &#123;y.magnitude:.3f&#125;, Desv. Est.: &#123;y.uncertainty:.3f&#125;")
+    # Salida estocástica: Media ~101.0, Desv. Est. ~20.0</code></pre>
+  </section>
+
+  <!-- 6. Correlated Uncertainty & Covariance Store -->
+  <section class="guide-section">
+    <h2 id="covariance">6. Incertidumbre Correlacionada y Almacén de Covarianza</h2>
+    <p>
+      Por defecto, MeasureKit realiza un seguimiento de las correlaciones entre variables (lo que significa que la resta de una variable consigo misma es exactamente cero). Utiliza dos mecanismos internos diferentes:
+    </p>
+
+    <h3>A. Seguimiento de Linaje (Escalares)</h3>
+    <p>
+      Para valores escalares, <code>CovarianceModel</code> asigna un UUID a cada cantidad independiente. Al realizar operaciones matemáticas, combina linealmente los coeficientes de sensibilidad:
+      <code>c_new[uuid] = sum(jac_k * c_k[uuid])</code>.
+    </p>
+    <p>
+      La desviación estándar final se reconstruye como <code>sqrt(sum(c_new[uuid]^2))</code>.
+    </p>
+
+    <h3>B. Matriz de Covarianza Global (Arrays)</h3>
+    <p>
+      Para operaciones con arrays, un <code>CovarianceStore</code> realiza un seguimiento de los índices en una matriz de covarianza global. Propaga los bloques de incertidumbre mediante transformaciones afines:
+      <code>&Sigma;_out = J * &Sigma;_in * J.T</code>.
+    </p>
+    <p>
+      Puedes aislar el seguimiento de covarianza a un bloque específico mediante gestores de contexto:
+    </p>
+    <pre><code>import measurekit as mk
+from measurekit import Q_, MeasureKitContext, PruningConfig
+
+# Establecer un contexto de covarianza acotado
+with MeasureKitContext(backend_type="numpy") as store:
+    # A las variables se les asignan rebanadas en el almacén local
+    x = Q_([1.0, 2.0], "m", uncertainty=[0.1, 0.2])
+    y = x * 2.0
+    
+# Aislamiento limpio: el almacén se descarta al salir del bloque</code></pre>
+  </section>
+
+  <!-- 7. Stateless Functional API for JAX -->
+  <section class="guide-section">
+    <h2 id="functional">7. API Funcional sin Estado para JAX</h2>
+    <p>
+      Los estados globales y los contextos locales (como <code>contextvars</code>) se rompen cuando se ejecutan dentro de grafos de compilación de JAX (<code>jax.jit</code>, <code>jax.vmap</code>).
+    </p>
+    <p>
+      MeasureKit resuelve esto proporcionando una API funcional sin estado en <code>measurekit.functional</code>. En este modo, la matriz de covarianza y los metadatos de asignación de variables se almacenan explícitamente dentro de un objeto <code>FunctionalState</code> que se pasa como argumento a través de las llamadas a funciones:
+    </p>
+    <pre><code>import jax
+import jax.numpy as jnp
+from measurekit import Q_
+from measurekit.functional import FunctionalState, add, sub
+
+# FunctionalState es un pytree registrado de JAX
+state = FunctionalState()
+
+x = Q_(jnp.array([1.0, 2.0]), "m", uncertainty=[0.1, 0.2])
+y = Q_(jnp.array([3.0, 4.0]), "m", uncertainty=[0.3, 0.4])
+
+# Las operaciones devuelven (resultado, nuevo_estado)
+res, new_state = add(x, y, state)
+diff, final_state = sub(res, x, new_state)
+
+print(diff.uncertainty) # ¡La desviación estándar se calcula correctamente!</code></pre>
+  </section>
+
+  <!-- 8. Multi-Backend & Lazy Loading -->
+  <section class="guide-section">
+    <h2 id="backends">8. Multi-Backend y Carga Perezosa</h2>
+    <p>
+      MeasureKit soporta polimórficamente diferentes librerías de arrays y tensores. El <code>BackendManager</code> carga los backends de forma perezosa solo en la primera llamada:
+    </p>
+    <ul>
+      <li><code>numpy</code>: Operaciones estándar de arrays de NumPy.</li>
+      <li><code>torch</code>: Operaciones de tensores de PyTorch.</li>
+      <li><code>jax</code>: Operaciones de arrays de JAX.</li>
+      <li><code>python</code>: Fallback para flotantes y enteros estándar de Python.</li>
+    </ul>
+    <p>
+      Importar <code>measurekit</code> es extremadamente rápido porque no importa torch, JAX ni scipy hasta que se pasa un tensor de ese backend a la factoría.
+    </p>
+  </section>
+
+  <!-- 9. JIT Compilation & Zero-Overhead Tracing -->
+  <section class="guide-section">
+    <h2 id="jit">9. Compilación JIT y Trazado Sin Overhead</h2>
+    <p>
+      La ejecución estándar en Python de objetos <code>Quantity</code> conlleva overhead debido a la asignación de clases y validación de unidades. Para operaciones de alto rendimiento, MeasureKit soporta dos mecanismos de trazado:
+    </p>
+
+    <h3>A. Compilación nativa en PyTorch/JAX</h3>
+    <p>
+      Al compilar a través de <code>torch.compile</code> o <code>jax.jit</code>, MeasureKit registra las comprobaciones de unidades durante la fase inicial de trazado. Una vez compilado, las validaciones de unidades se omiten, y el kernel final corre en la GPU sobre tensores puros con **Cero Overhead** (&lt;1.1&times; comparado con PyTorch puro).
+    </p>
+
+    <h3>B. El compilador JIT propio de MeasureKit</h3>
+    <p>
+      Para código estándar de Python, puedes usar el decorador <code>@jit</code>. Este traza las funciones de forma simbólica usando <code>TracerQuantity</code> y una representación en Rust de <code>RationalUnit</code>, compila una función nativa de Python usando <code>exec</code> y la almacena en caché:
+    </p>
+    <pre><code>from measurekit import Q_, jit
+
+@jit
+def kinetic_energy(mass, velocity):
+    return 0.5 * mass * velocity ** 2
+
+# Trazado y compilación en la primera ejecución
+KE = kinetic_energy(Q_(70.0, "kg"), Q_(10.0, "m/s"))
+print(KE)  # 3500.0 J (las ejecuciones posteriores operan sobre el kernel compilado)</code></pre>
+  </section>
+
+  <!-- 10. Symbolic Math & Equation Solving -->
+  <section class="guide-section">
+    <h2 id="symbolic">10. Matemática Simbólica y Resolución de Ecuaciones</h2>
+    <p>
+      Con el extra <code>[symbolic]</code>, MeasureKit se integra con SymPy para proporcionar matemática simbólica adaptada a unidades, derivadas, integración y resolución de ecuaciones:
+    </p>
+    <pre><code>from measurekit.domain.symbolic.quantity import SymbolicQuantity, Equation
+
+# Crear variables simbólicas atómicas con unidades
+x = SymbolicQuantity("x", "m")
+t = SymbolicQuantity("t", "s")
+v = SymbolicQuantity("v", "m/s")
+
+# Las ecuaciones validan la consistencia dimensional al ser creadas
+eq = Equation(x, v * t)
+
+# Resolver para una variable objetivo simbólicamente
+t_solved = eq.solve_for(t)
+print(t_solved)            # Expression(x/v) [s]
+
+# Diferenciar o integrar expresiones (actualiza unidades automáticamente)
+v_expr = x.diff(t)
+print(v_expr)             # Expression(x/t) [m/s]
+
+# Evaluar la expresión con valores concretos
+res = t_solved.evaluate(x=Q_(100, "m"), v=Q_(5, "m/s"))
+print(res)                # 20.0 s</code></pre>
+  </section>
+
+  <!-- 11. Pandas Extensions & Accessors -->
+  <section class="guide-section">
+    <h2 id="pandas">11. Extensiones y Accesores de Pandas</h2>
+    <p>
+      MeasureKit registra un accesor personalizado <code>.mk</code> para Series de Pandas que contienen objetos Quantity, junto con tipos de datos personalizados:
+    </p>
+    <pre><code>import pandas as pd
+import numpy as np
+from measurekit import Q_
+
+# Crear una Serie con un tipo de unidad estrictamente controlado
+series = pd.Series(
+    [Q_(1.0, "m"), Q_(2.0, "m")],
+    dtype="measurekit[m]"
+)
+
+# Acceder a magnitudes, incertidumbres y unidades en lote
+print(series.mk.magnitude)      # pd.Series([1.0, 2.0])
+print(series.mk.uncertainty)    # pd.Series([0.0, 0.0])
+print(series.mk.unit)           # m
+
+# Reconstituir la Serie como una sola cantidad vectorial Quantity
+array_q = series.mk.array
+print(array_q)                  # [1.0 2.0] m (Quantity vectorizado)
+
+# Realizar conversiones vectorizadas
+converted = series.mk.to("cm")
+print(converted)                # Serie de [100.0 cm, 200.0 cm]</code></pre>
+  </section>
+
+  <!-- 12. HDF5, xarray & State Serialization -->
+  <section class="guide-section">
+    <h2 id="io">12. HDF5, xarray y Serialización de Estado</h2>
+    <p>
+      Para guardar datos en disco, MeasureKit ofrece tres alternativas de serialización:
+    </p>
+
+    <h3>A. Serialización HDF5 (CF Conventions)</h3>
+    <p>
+      Guarda la magnitud en un dataset y escribe la unidad en los atributos de este. Las desviaciones estándar se guardan bajo un dataset auxiliar:
+    </p>
+    <pre><code>import h5py
+from measurekit.ext.io import to_hdf5, from_hdf5
+
+q = Q_([1.0, 2.0], "m/s", uncertainty=[0.1, 0.2])
+
+with h5py.File("data.h5", "w") as f:
+    to_hdf5(q, f, "velocity")
+
+# Reconstituir la cantidad con sus metadatos
+with h5py.File("data.h5", "r") as f:
+    q_loaded = from_hdf5(f["velocity"])</code></pre>
+
+    <h3>B. Accesor de Xarray</h3>
+    <pre><code>import xarray as xr
+
+# Asocia metadatos de unidades a datasets de xarray
+da = xr.DataArray([10, 20], attrs=&#123;"units": "m/s"&#125;)
+q = da.measurekit.quantify()
+print(q)  # [10 20] m/s</code></pre>
+
+    <h3>C. Serialización del Estado de la Aplicación</h3>
+    <p>
+      Serializar cantidades directamente con pickle puede hacer que se pierdan las correlaciones rastreadas en la matriz de covarianza. Usa <code>save_state</code> y <code>load_state</code> para guardar y restaurar el <code>CovarianceStore</code> activo:
+    </p>
+    <pre><code>from measurekit import save_state, load_state
+
+# Guarda la matriz de covarianza completa y su registro
+save_state("app_state.pkl")
+
+# Restaura el almacén al contexto activo
+load_state("app_state.pkl")</code></pre>
+  </section>
+
+  <div class="next-section">
+    <a href="/es/api" class="btn-primary">Siguiente: Referencia API →</a>
+  </div>
+</DocsLayout>
+
+<style>
+  .toc-card {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .toc-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text3); margin-bottom: 0.5rem;
+  }
+  .toc-list {
+    list-style: none; padding: 0; columns: 2; gap: 1rem;
+    margin: 0;
+  }
+  .toc-list li { margin-bottom: 0.25rem; }
+  .toc-list a { color: var(--accent2); font-size: 0.875rem; text-decoration: none; }
+  .toc-list a:hover { text-decoration: underline; }
+
+  .guide-section {
+    margin-bottom: 4rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .guide-section:last-of-type { border-bottom: none; }
+  .guide-section h2 {
+    margin-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--accent-glow);
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+  .guide-section h3 {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+  }
+
+  .btn-primary {
+    background: var(--accent); color: white;
+    padding: 0.6rem 1.4rem; border-radius: var(--radius);
+    font-weight: 600; text-decoration: none; font-size: 0.9rem;
+    transition: background 0.2s; display: inline-block; margin-top: 0.5rem;
+  }
+  .btn-primary:hover { background: var(--accent2); text-decoration: none; }
+  .next-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+
+  @media (max-width: 768px) {
+    .toc-list { columns: 1; }
+  }
+</style>

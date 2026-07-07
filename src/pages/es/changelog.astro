@@ -1,0 +1,154 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Historial" description="Historial de versiones y notas de lanzamiento de MeasureKit" activeSection="changelog">
+  <div class="page-header">
+    <div class="kicker">Historial de Versiones</div>
+    <h1>Historial</h1>
+    <p>Historial de versiones y notas de lanzamiento para MeasureKit.</p>
+  </div>
+
+  <div class="callout callout-info">
+    <p>MeasureKit se encuentra actualmente en fase <strong>Beta</strong>. La API puede experimentar cambios entre versiones antes del lanzamiento estable 1.0.</p>
+  </div>
+
+  <div class="releases">
+
+    <div class="release current">
+      <div class="release-header">
+        <h2 id="v018">
+          <span class="release-version">v0.1.8</span>
+          <span class="badge badge-green">Última</span>
+          <span class="release-date">2026</span>
+        </h2>
+      </div>
+      <div class="release-body">
+        <h3>Novedades</h3>
+        <ul>
+          <li>Soporte para Python 3.13 y 3.14 añadido a la matriz de CI</li>
+          <li>Optimización de velocidad de arranque — presupuesto de importaciones controlado en CI</li>
+          <li>GrammarInterpreter: se añadió la sintaxis de consulta <code>= ?</code> para inspección de variables</li>
+          <li><code>measurekit repl</code> ahora acepta un argumento de expresión inline</li>
+          <li>Constantes actualizadas a CODATA 2022 — más de 400 constantes físicas disponibles</li>
+          <li>Núcleo en Rust (<code>measurekit-core</code>) actualizado para compatibilidad con PyO3 0.22</li>
+          <li>Mejoras en Pandas: optimización del manejo de tipos de datos en columnas físicas</li>
+          <li>Límite de cobertura de pruebas incrementado a 80%+ en el pipeline de CI</li>
+        </ul>
+
+        <h3>Instalación</h3>
+        <pre><code>pip install measurekit==0.1.8</code></pre>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="release-header">
+        <h2 id="v017">
+          <span class="release-version">v0.1.7</span>
+          <span class="release-date">2025</span>
+        </h2>
+      </div>
+      <div class="release-body">
+        <ul>
+          <li>Añadido backend de JAX con soporte completo para <code>jax.jit</code> y <code>jax.vmap</code></li>
+          <li>API Funcional (<code>measurekit.functional</code>) para el manejo explícito de matrices de covarianza en JAX</li>
+          <li>Registro de FunctionalState como un pytree de JAX</li>
+          <li>Propagación de incertidumbre correlacionada mediante el almacén de covarianza</li>
+          <li>Gestor de contexto <code>propagation_mode</code> para cambiar de estrategia</li>
+          <li>Corrección en la aritmética de temperaturas con offset (la resta de Celsius/Fahrenheit retorna Kelvin delta)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="release-header">
+        <h2 id="v016">
+          <span class="release-version">v0.1.6</span>
+          <span class="release-date">2025</span>
+        </h2>
+      </div>
+      <div class="release-body">
+        <ul>
+          <li>Backend de PyTorch: integración de <code>__torch_dispatch__</code> para compilación JIT</li>
+          <li>Comprobaciones de unidades al trazar el grafo &rarr; el grafo compilado opera sobre tensores puros (&lt;1.1× de overhead)</li>
+          <li>Backend de NumPy con soporte para compilación JIT de Numba</li>
+          <li>Intérprete sintáctico MeasureNote (<code>measurekit.ext.grammar</code>)</li>
+          <li>Sesión interactiva REPL y CLI (<code>python -m measurekit</code>)</li>
+          <li>Integración con SymPy para derivación simbólica</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="release-header">
+        <h2 id="v015">
+          <span class="release-version">v0.1.5</span>
+          <span class="release-date">2024</span>
+        </h2>
+      </div>
+      <div class="release-body">
+        <ul>
+          <li>Núcleo en Rust (<code>measurekit-core</code>) vía PyO3: RationalUnit, UnitRegistry, CovarianceStore</li>
+          <li>Instalación base sin dependencias — fallback puro en Python para todas las rutas de código</li>
+          <li>Soporte para prefijos del SI: los 24 prefijos estándar (desde yocto hasta yotta)</li>
+          <li>Más de 125 unidades físicas distribuidas en 28 dimensiones</li>
+          <li>Módulo integrado de constantes físicas de la CODATA</li>
+          <li>Integración con Pydantic v2 para validación dimensional de atributos de modelos</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="release">
+      <div class="release-header">
+        <h2 id="v010">
+          <span class="release-version">v0.1.0</span>
+          <span class="release-date">2024</span>
+        </h2>
+      </div>
+      <div class="release-body">
+        <p>Lanzamiento público inicial — "El Validador de Tareas Sobrediseñado".</p>
+        <ul>
+          <li>Clase base <code>Quantity</code> con aritmética y validación de unidades</li>
+          <li>Analizador de expresiones de unidades (/, *, ^, prefijos)</li>
+          <li>Propagación básica de incertidumbre (errores independientes)</li>
+          <li>Unidades de temperatura con desplazamiento de origen (°C, °F, K)</li>
+          <li>Licencia MIT</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-info" style="margin-top: 2rem;">
+    <p>Para ver el historial completo de commits, consulta los <a href="https://github.com/Alexisrx96/measurekit/commits/main" target="_blank" rel="noopener">commits en GitHub</a>. Para reportar errores o solicitar mejoras, <a href="https://github.com/Alexisrx96/measurekit/issues" target="_blank" rel="noopener">abre una incidencia en GitHub</a>.</p>
+  </div>
+</DocsLayout>
+
+<style>
+  .releases { display: flex; flex-direction: column; gap: 0; }
+
+  .release {
+    border-left: 2px solid var(--border2);
+    padding-left: 1.5rem;
+    padding-bottom: 2rem;
+    position: relative;
+  }
+  .release::before {
+    content: '';
+    position: absolute;
+    left: -5px; top: 0.85rem;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+  }
+  .release.current::before { background: var(--accent2); }
+
+  .release-header h2 {
+    display: flex; align-items: center; gap: 0.75rem;
+    border: none; padding: 0; margin: 0 0 1rem;
+  }
+  .release-version { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .release-date { color: var(--text3); font-size: 0.8rem; font-weight: 400; font-family: 'Inter', sans-serif; }
+  .release-body h3 { color: var(--text3); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 1rem 0 0.4rem; }
+  .release-body ul { margin-bottom: 0.75rem; }
+  .release-body pre { margin-top: 0.5rem; }
+</style>

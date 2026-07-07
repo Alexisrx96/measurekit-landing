@@ -1,0 +1,326 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Ejemplos" description="Ejemplos reales de uso de MeasureKit para física, ingeniería y ciencia de datos" activeSection="examples">
+  <div class="page-header">
+    <div class="kicker">Ejemplos</div>
+    <h1>Ejemplos</h1>
+    <p>Ejemplos prácticos organizados por dominio — desde la resolución de tareas escolares hasta cálculos avanzados con tensores.</p>
+  </div>
+
+  <!-- Section: Basic Physics -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🎓</span>
+      <div>
+        <h2 id="homework">Validador de Tareas — Cinemática</h2>
+        <p>El caso de uso original: verificar problemas físicos con seguridad de unidades.</p>
+      </div>
+    </div>
+    <pre><code>from measurekit import Q_
+
+# Problema: Un auto viaja a 90 km/h. ¿Qué distancia recorre en 2.5 horas?
+velocidad = Q_(90, "km/hr")
+tiempo    = Q_(2.5, "hr")
+distancia = velocidad * tiempo
+
+print(f"Distancia: &#123;distancia&#125;")            # 225.0 km
+print(f"En metros: &#123;distancia.to('m')&#125;")   # 225000.0 m
+print(f"En millas: &#123;distancia.to('mi')&#125;")   # 139.81 mi
+
+# Problema: Convertir 60 mph a m/s
+v = Q_(60, "mph")
+print(f"60 mph = &#123;v.to('m/s'):.2f&#125;")     # 26.82 m/s
+
+# Problema: Caída libre — ¿qué distancia cae un cuerpo en 3 segundos?
+g = Q_(9.81, "m/s^2")
+t = Q_(3.0, "s")
+
+# d = ½ × g × t²
+d = 0.5 * g * t**2
+print(f"Caída libre: &#123;d&#125;")    # 44.145 m</code></pre>
+  </section>
+
+  <!-- Section: Force & Pressure -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">⚙️</span>
+      <div>
+        <h2 id="engineering">Ingeniería: Fuerza y Presión</h2>
+        <p>Análisis de esfuerzo y cálculos de presión hidráulica.</p>
+      </div>
+    </div>
+    <pre><code>from measurekit import Q_
+
+# Cálculo de esfuerzo axial
+force = Q_(500, "N")
+area  = Q_(2.0, "m^2")
+stress = force / area
+
+print(stress)             # 250.0 Pa
+print(stress.to("kPa"))   # 0.25 kPa
+print(stress.to("psi"))   # 0.0363 psi
+
+# Presión hidráulica
+flow_rate = Q_(10, "L/min")
+head_loss = Q_(5, "bar")
+
+# Potencia = Caudal × Caída de presión
+power = flow_rate.to("m^3/s") * head_loss.to("Pa")
+print(f"Potencia hidráulica: &#123;power.to('W'):.1f&#125;")  # ~833.3 W
+
+# Momento de inercia
+m = Q_(2.0, "kg")
+r = Q_(0.3, "m")
+I = m * r**2
+print(I)                # 0.18 kg⋅m²
+print(I.to("g⋅cm^2"))   # 1.8e+6 g⋅cm²</code></pre>
+  </section>
+
+  <!-- Section: Temperature -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🌡️</span>
+      <div>
+        <h2 id="temperature">Conversiones de Temperatura</h2>
+        <p>Manejo de unidades con desplazamiento (Celsius, Fahrenheit, Kelvin).</p>
+      </div>
+    </div>
+    <pre><code>from measurekit import Q_
+
+# Conversiones absolutas
+t_c = Q_(100, "degC")
+print(t_c.to("degF"))  # 212.0 °F
+print(t_c.to("K"))     # 373.15 K
+
+t_f = Q_(32, "degF")
+print(t_f.to("degC"))  # 0.0 °C
+print(t_f.to("K"))     # 273.15 K
+
+# DIFERENCIA de temperatura (lineal — sin desplazamiento de origen)
+t1 = Q_(100, "degC")
+t2 = Q_(90,  "degC")
+delta = t1 - t2          # Diferencia de temperatura
+print(delta)             # 10 K (o ΔdegC)
+print(delta.to("K"))     # 10.0 K
+
+# Sumar un delta a una temperatura absoluta
+t_new = t1 + Q_(5, "K")  # 105.0 °C</code></pre>
+  </section>
+
+  <!-- Section: Uncertainty -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">📊</span>
+      <div>
+        <h2 id="uncertainty">Propagación de Incertidumbre</h2>
+        <p>Cálculo del margen de error para experimentos de física.</p>
+      </div>
+    </div>
+    <pre><code>from measurekit import Q_
+import math
+
+# Medir la gravedad de un experimento de péndulo
+# T = 2π√(L/g)  →  g = 4π²L/T²
+
+L = Q_(1.0,  "m", uncertainty=0.002)   # 1.000 ± 0.002 m
+T = Q_(2.01, "s", uncertainty=0.005)   # 2.01  ± 0.005 s
+
+g_meas = 4 * math.pi**2 * L / T**2
+print(f"g = &#123;g_meas.magnitude:.4f&#125; ± &#123;g_meas.uncertainty:.4f&#125; m/s²")
+# g = 9.7892 ± 0.0518 m/s²
+
+# Error relativo
+rel_error = g_meas.uncertainty / g_meas.magnitude * 100
+print(f"Error relativo: &#123;rel_error:.2f&#125;%")  # ~0.53%
+
+# Resistencia a partir de la ley de Ohm: R = V/I
+V = Q_(12.0, "V",  uncertainty=0.1)
+I = Q_(2.5,  "A",  uncertainty=0.05)
+R = V / I
+print(f"R = &#123;R.magnitude:.3f&#125; ± &#123;R.uncertainty:.3f&#125; Ω")  # 4.800 ± 0.124 Ω</code></pre>
+  </section>
+
+  <!-- Section: Grammar -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">✍️</span>
+      <div>
+        <h2 id="grammar">Notación de Gramática</h2>
+        <p>Escribe cálculos en notación física natural utilizando GrammarInterpreter.</p>
+      </div>
+    </div>
+    <pre><code>from measurekit.ext.grammar import GrammarInterpreter
+
+mn = GrammarInterpreter()
+
+# Resolver varias variables interconectadas
+mn.run("""
+# Análisis de circuito eléctrico
+V    = 24 V
+R1   = 100 Ω
+R2   = 200 Ω
+I    = V / R1
+P    = V * I
+""")
+
+# Consultar valores convertidos
+print(mn.eval("I => mA"))      # 240.0 mA
+print(mn.eval("P => W"))       # 5.76 W
+
+# Aseveraciones para validar resultados
+print(mn.eval("I == 0.24 A"))  # True
+print(mn.eval("P == 5.76 W"))  # True</code></pre>
+  </section>
+
+  <!-- Section: NumPy tensors -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🔢</span>
+      <div>
+        <h2 id="numpy">Operaciones con Arrays de NumPy</h2>
+        <p>Álgebra matricial de unidades con soporte de broadcasting.</p>
+      </div>
+    </div>
+    <pre><code>import numpy as np
+from measurekit import Q_
+
+# Array de velocidad en función del tiempo
+t = Q_(np.linspace(0, 10, 11), "s")        # 0 a 10 segundos
+a = Q_(9.81, "m/s^2")                       # aceleración constante
+
+v = a * t                                    # velocidad instantánea
+print(v.to("km/hr"))   # [  0.  35.316  70.632  ...] km/hr
+
+# Distancia integrada usando regla trapezoidal
+v_arr = v.magnitude   # array de NumPy
+t_arr = t.magnitude
+
+d_raw = np.trapz(v_arr, t_arr)   # área bajo curva v-t
+d = Q_(d_raw, "m")
+print(d)              # ~490.5 m (≈ ½ × g × t²)
+
+# Conversión masiva de unidades
+longitudes = Q_(np.array([1.0, 2.5, 5.0, 10.0, 100.0]), "m")
+print(longitudes.to("ft"))  # [3.28, 8.20, 16.40, 32.81, 328.08] ft</code></pre>
+  </section>
+
+  <!-- Section: Symbolic -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🧮</span>
+      <div>
+        <h2 id="symbolic">Diferenciación Simbólica</h2>
+        <p>Derivación analítica de la velocidad y aceleración a partir de la posición.</p>
+      </div>
+    </div>
+    <pre><code># Requiere: pip install "measurekit[symbolic]"
+import sympy as sp
+from measurekit import Q_
+
+t = sp.Symbol("t")
+
+# Posición: x(t) = 5t² m (aceleración uniforme desde reposo)
+x   = Q_(5 * t**2, "m")
+q_t = Q_(t, "s")           # variable temporal
+
+# Primera derivada: velocidad
+v = x.diff(q_t)
+print(f"v(t) = &#123;v&#125;")       # 10*t m/s
+
+# Segunda derivada: aceleración
+a = v.diff(q_t)
+print(f"a(t) = &#123;a&#125;")       # 10 m/s^2
+
+# Evaluar en t = 3s
+print(f"v(3s) = &#123;v.magnitude.subs(t, 3)&#125; m/s")  # 30 m/s
+print(f"x(3s) = &#123;x.magnitude.subs(t, 3)&#125; m")    # 45 m</code></pre>
+  </section>
+
+  <!-- Section: Pandas -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🐼</span>
+      <div>
+        <h2 id="pandas">Integración con Pandas</h2>
+        <p>Análisis de datos con tipado dimensional en DataFrames.</p>
+      </div>
+    </div>
+    <pre><code># Requiere: pip install "measurekit[pandas]"
+import pandas as pd
+import numpy as np
+from measurekit import Q_
+
+# Datos de muestra del sensor
+df = pd.DataFrame(&#123;
+    "pressure_Pa":  np.random.normal(101325, 500, 100),
+    "temp_K":       np.random.normal(293.15, 2, 100),
+    "velocity_mps": np.random.uniform(0, 30, 100),
+&#125;)
+
+# Envolver las columnas en objetos Quantity
+P = Q_(df["pressure_Pa"].values, "Pa")
+T = Q_(df["temp_K"].values, "K")
+v = Q_(df["velocity_mps"].values, "m/s")
+
+# Presión dinámica: q = ½ρv², donde ρ = P/(R_específica × T)
+R_air = Q_(287.05, "J/(kg⋅K)")  # constante del gas
+rho = P / (R_air * T)            # densidad del aire [kg/m³]
+q   = 0.5 * rho * v**2           # presión dinámica [Pa]
+
+# Guardar los resultados en el DataFrame
+df["density_kgm3"]    = rho.magnitude
+df["dyn_pressure_Pa"] = q.magnitude
+df["dyn_pressure_hPa"] = q.to("hPa").magnitude
+
+print(df.describe().round(3))</code></pre>
+  </section>
+
+  <!-- Section: PyTorch JIT -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">⚡</span>
+      <div>
+        <h2 id="jit">Compilación JIT en PyTorch</h2>
+        <p>Funciones físicas con tipos verificados compiladas a kernels de GPU.</p>
+      </div>
+    </div>
+    <pre><code># Requiere: pip install "measurekit[torch]"
+import torch
+from measurekit import Q_
+
+def kinetic_energy(mass, velocity):
+    """KE = ½mv² — unidades validadas al trazar el grafo."""
+    return 0.5 * mass * velocity ** 2
+
+# Crear tensores unit-aware (en GPU si está disponible)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+m = Q_(torch.tensor(70.0, device=device), "kg")
+v = Q_(torch.tensor(10.0, device=device), "m/s")
+
+# Compilar — las validaciones ocurren una única vez durante el trazado
+compiled_ke = torch.compile(kinetic_energy)
+KE = compiled_ke(m, v)
+
+print(KE)           # 3500.0 J
+print(KE.to("kJ"))  # 3.5 kJ</code></pre>
+  </section>
+</DocsLayout>
+
+<style>
+  .example-section {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .example-section:last-child { border-bottom: none; }
+  .example-header {
+    display: flex; align-items: flex-start; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .example-icon { font-size: 2rem; flex-shrink: 0; margin-top: 0.2rem; }
+  .example-header h2 { margin-top: 0; border: none; padding: 0; }
+  .example-header p { margin: 0; }
+  .example-section pre { margin-top: 0.75rem; }
+</style>
