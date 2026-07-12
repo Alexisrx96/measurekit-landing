@@ -90,6 +90,7 @@ const grammarApi = [
       <li><a href="#grammar-api">API de Gramática</a></li>
       <li><a href="#exceptions">Excepciones</a></li>
       <li><a href="#extracted-api">API Extraída</a></li>
+      <li><a href="#extensions-api">Extensiones y APIs Avanzadas</a></li>
       <li><a href="#units-module">Módulo de Unidades</a></li>
     </ul>
   </div>
@@ -339,6 +340,55 @@ except IncompatibleUnitsError as e:
             <td>{method.docstring || "No docstring provided."}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Extensions & Advanced APIs -->
+  <h2 id="extensions-api">Extensiones y APIs Avanzadas</h2>
+  <div class="api-card">
+    <h3>Extensión de Química (<code>measurekit.ext.chemistry</code>)</h3>
+    <table>
+      <thead><tr><th>Clase / Función</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>Species(formula: str)</code></td><td>Representación de especies químicas. Analiza fórmulas complejas (ej. <code>"Ca(NO3)2"</code>) y calcula <code>.molar_mass</code> con incertidumbre.</td></tr>
+        <tr><td><code>Reaction.from_string(eq: str)</code></td><td>Analiza y balancea ecuaciones químicas (ej. <code>"2 H2 + O2 -> 2 H2O"</code>). Proporciona <code>.reactant_coeffs</code> y <code>.product_coeffs</code>.</td></tr>
+        <tr><td><code>Reaction.calculate(**reactants)</code></td><td>Calcula el rendimiento y el reactivo limitante a partir de objetos Quantity, devolviendo un <code>ReactionResult</code>.</td></tr>
+        <tr><td><code>molar_equivalency(species: Species)</code></td><td>Retorna una lista de equivalencias entre masa (kg) y cantidad de sustancia (mol) según la masa molar de la especie.</td></tr>
+        <tr><td><code>arrhenius(A, Ea, T)</code></td><td>Calcula la constante de velocidad $k = A e^&#123;-E_a / (RT)&#125;$ validando que el exponente sea adimensional.</td></tr>
+        <tr><td><code>gibbs_free_energy(dH, T, dS)</code></td><td>Calcula la energía libre de Gibbs $\Delta G = \Delta H - T \Delta S$ con verificación dimensional.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Motor Simbólico Nativo (<code>measurekit.domain.symbolic.native</code>)</h3>
+    <table>
+      <thead><tr><th>Clase / Función</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>Expr.symbol(name: str)</code></td><td>Crea un nodo de variable simbólica (hoja) en el árbol de expresión.</td></tr>
+        <tr><td><code>Expr.number(val: float)</code></td><td>Crea un nodo numérico literal en el árbol de expresión.</td></tr>
+        <tr><td><code>Expr.Quantity(name: str, unit: CompoundUnit)</code></td><td>Crea un nodo de variable simbólica que transporta unidades.</td></tr>
+        <tr><td><code>.simplify()</code></td><td>Simplificación algebraica recursiva (leyes de identidad, inversos, agrupación de términos).</td></tr>
+        <tr><td><code>.diff(var_name: str)</code></td><td>Diferencia la expresión de forma analítica respecto a una variable, preservando reglas de unidades.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Compilador de Física y Regresión Simbólica (<code>measurekit.ext</code>)</h3>
+    <table>
+      <thead><tr><th>Función</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>compile_physics_model(func, input_units, output_unit)</code></td><td>Trazado de una función Python, validación de dimensiones y generación de un núcleo puramente numérico (sin unidades) vía <code>exec()</code>.</td></tr>
+        <tr><td><code>SymbolicRegressor(inputs, target, allowed_operations, ...)</code></td><td>Regresor mediante programación genética para ajustar fórmulas físicamente coherentes a un conjunto de datos. Retorna un <code>FittedFormula</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Gráficos con Soporte de Unidades (<code>measurekit.plotting</code> / métodos de <code>Quantity</code>)</h3>
+    <table>
+      <thead><tr><th>Método / Función</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td><code>.plot(x, kind, ax)</code></td><td>Grafica de forma estética esta cantidad física, etiquetando ejes con unidades y dibujando barras de error automáticamente.</td></tr>
+        <tr><td><code>.plot_covariance(ax)</code></td><td>Grafica la matriz de covarianza o correlación si se rastrea correlación de incertidumbres.</td></tr>
+        <tr><td><code>.plot_slices(slice_dim, ...)</code></td><td>Grafica múltiples cuadrículas 2D para visualizar campos N-dimensionales (dimensiones 3D o superiores).</td></tr>
+        <tr><td><code>.plot_interactive(slice_dims, ...)</code></td><td>Crea un gráfico interactivo con controles deslizantes (sliders) para explorar dimensiones en arrays N-D.</td></tr>
       </tbody>
     </table>
   </div>

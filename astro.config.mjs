@@ -3,6 +3,9 @@ import { defineConfig } from "astro/config";
 // Every canonical / og:url / sitemap URL derives from this.
 export default defineConfig({
   site: "https://measurekit.irvintorres.com",
+  server: {
+    port: 81,
+  },
   i18n: {
     defaultLocale: "en",
     locales: ["en", "es"],

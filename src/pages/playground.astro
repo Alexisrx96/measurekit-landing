@@ -6,6 +6,8 @@ import DocsLayout from "../layouts/DocsLayout.astro";
   <!-- Stylesheets for CodeMirror -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css" />
+  <!-- Plotly.js for interactive N-D visualizations -->
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" is:inline></script>
 
   <div class="page-header">
     <div class="kicker">Interactive</div>
@@ -30,7 +32,8 @@ import DocsLayout from "../layouts/DocsLayout.astro";
           <button class="snippet-btn" data-snippet="basic">Basic Math</button>
           <button class="snippet-btn" data-snippet="uncertainty">Uncertainty</button>
           <button class="snippet-btn" data-snippet="numpy">NumPy Array</button>
-          <button class="snippet-btn" data-snippet="grammar">MeasureNote</button>
+          <button class="snippet-btn" data-snippet="grammar">MeasureKit (MKML)</button>
+          <button class="snippet-btn" data-snippet="visualizer" style="border-color: var(--accent); color: var(--accent2); font-weight: 600;">📊 Plot Visualizer</button>
         </div>
       </div>
       <button class="run-btn" id="runBtn">
@@ -67,13 +70,49 @@ except Exception as e:
 </textarea>
       </div>
 
-      <!-- Console Pane -->
-      <div class="pane console-pane">
-        <div class="pane-header">
-          <span>Terminal Output</span>
-          <button class="clear-btn" id="clearConsole">Clear</button>
+      <!-- Console Pane with Visualizer Tab -->
+      <div class="pane console-pane" style="position: relative;">
+        <div class="pane-header" style="justify-content: space-between; display: flex; align-items: center;">
+          <div class="pane-tabs" style="display: flex; gap: 0.5rem;">
+            <button class="pane-tab-btn active" id="tabConsoleBtn">Terminal Output</button>
+            <button class="pane-tab-btn" id="tabVisualizerBtn">
+              Visualizer N-D <span class="badge-new">NEW</span>
+            </button>
+          </div>
+          <div class="pane-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="clear-btn" id="clearConsole">Clear</button>
+          </div>
         </div>
-        <pre class="console-output" id="consoleOutput">Loading python compiler...</pre>
+        
+        <div class="pane-content" id="consoleContent" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <pre class="console-output" id="consoleOutput" style="flex: 1; overflow-y: auto;">Loading python compiler...</pre>
+        </div>
+        
+        <div class="pane-content" id="visualizerContent" style="flex: 1; display: none; flex-direction: column; overflow: hidden; background: #0b0e14; padding: 1rem; position: relative;">
+          <div class="visualizer-toolbar">
+            <div class="toolbar-left">
+              <span>Chart Type:</span>
+              <select id="chartTypeSelect">
+                <option value="auto">Auto-detect</option>
+                <option value="line2d">2D Line / Scatter</option>
+                <option value="scatter3d">3D Scatter</option>
+                <option value="parallel">Parallel Coordinates (N-D)</option>
+                <option value="splom">Scatter Plot Matrix (SPLOM)</option>
+                <option value="errorbar">Error Bars (2D / Uncertainty)</option>
+              </select>
+            </div>
+            <button class="pane-action-btn" id="clearPlotBtn">Reset Plot</button>
+          </div>
+          <div id="plotlyChart" style="width: 100%; height: 100%; min-height: 250px; flex: 1;"></div>
+          <div id="noPlotData" class="no-plot-data">
+            <div class="no-plot-icon">📊</div>
+            <p>No visualization data yet. Run code using the built-in <code>plot()</code> function to generate interactive graphs!</p>
+            <pre class="no-plot-example"># Example:
+x = [1, 2, 3, 4]
+y = [10, 15, 13, 17]
+plot(x, y, title="Interactive Graph")</pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -87,6 +126,42 @@ except Exception as e:
   <script is:inline>
     // Snippets database
     const snippets = {
+      visualizer: `from measurekit import Q_
+import numpy as np
+
+# 1. Create a time array (0 to 5 seconds)
+t = np.linspace(0, 5, 50)
+time = Q_(t, "s")
+
+# 2. Define gravity acceleration with uncertainty (9.81 +/- 0.15 m/s^2)
+g = Q_(9.81, "m/s^2", uncertainty=0.15)
+
+# 3. Compute position: y = 0.5 * g * t^2
+# MeasureKit automatically propagates the uncertainty!
+y = 0.5 * g * (time ** 2)
+
+print("Calculating free fall trajectory...")
+print(f"Final position: {y[-1]}")
+print(f"Propagated final uncertainty: {y[-1].uncertainty}")
+
+# 4. Call the built-in plot() function!
+# X, Y with automatic units and uncertainty bars
+plot(time, y, title="Free Fall Trajectory (with propagated uncertainty)")
+
+# --- TRY HIGH-DIMENSIONAL (N-D) PARALLEL COORDINATES ---
+# To view multiple variables dynamically, uncomment the code below:
+"""
+velocity = g * time
+data_nd = {
+    "Time": time,
+    "Acceleration": Q_(np.ones_like(t) * 9.81, "m/s^2", uncertainty=0.15),
+    "Velocity": velocity,
+    "Position": y
+}
+# Type "parallel" plots high-dimensional variables side-by-side
+plot(data=data_nd, type="parallel", title="N-D Flight Dynamics Analysis")
+"""
+`,
       basic: `from measurekit import Q_
 
 # Speed, distance, time calculation
@@ -130,7 +205,7 @@ print(velocity.to("km/hr"))
 `,
       grammar: `from measurekit.ext.grammar import GrammarInterpreter
 
-# Using paper-like MeasureNote physics notation
+# Using paper-like MeasureKit (MKML) physics notation
 interpreter = GrammarInterpreter()
 interpreter.run("""
 g = 9.81 +/- 0.02 m/s^2
@@ -153,8 +228,285 @@ print("Force converted to kN:", interpreter.eval("force => kN"))
     const clearConsole = document.getElementById('clearConsole');
     const consoleOutput = document.getElementById('consoleOutput');
 
+    const tabConsoleBtn = document.getElementById('tabConsoleBtn');
+    const tabVisualizerBtn = document.getElementById('tabVisualizerBtn');
+    const consoleContent = document.getElementById('consoleContent');
+    const visualizerContent = document.getElementById('visualizerContent');
+    const chartTypeSelect = document.getElementById('chartTypeSelect');
+    const clearPlotBtn = document.getElementById('clearPlotBtn');
+
     let pyodide = null;
     let editor = null;
+    let currentPlotData = null;
+
+    // Tabs functionality
+    function switchTab(tab) {
+      if (tab === 'console') {
+        tabConsoleBtn.classList.add('active');
+        tabVisualizerBtn.classList.remove('active');
+        consoleContent.style.display = 'flex';
+        visualizerContent.style.display = 'none';
+      } else {
+        tabVisualizerBtn.classList.add('active');
+        tabConsoleBtn.classList.remove('active');
+        consoleContent.style.display = 'none';
+        visualizerContent.style.display = 'flex';
+        
+        // Resize plotly to fill container after displaying
+        if (currentPlotData) {
+          Plotly.Plots.resize('plotlyChart');
+        }
+      }
+    }
+
+    tabConsoleBtn.addEventListener('click', () => switchTab('console'));
+    tabVisualizerBtn.addEventListener('click', () => switchTab('visualizer'));
+
+    // Exposed to Python via js.updatePlot
+    window.updatePlot = function(jsonStr) {
+      try {
+        currentPlotData = JSON.parse(jsonStr);
+        document.getElementById('noPlotData').style.display = 'none';
+        
+        // Switch tab to visualizer automatically
+        switchTab('visualizer');
+        
+        drawPlot();
+      } catch (e) {
+        console.error("Error parsing plot data:", e);
+      }
+    };
+
+    function drawPlot() {
+      if (!currentPlotData) return;
+      
+      const chartDiv = document.getElementById('plotlyChart');
+      const plotType = chartTypeSelect.value;
+      
+      let typeToDraw = plotType;
+      if (typeToDraw === 'auto') {
+        if (currentPlotData.data) {
+          typeToDraw = 'parallel';
+        } else if (currentPlotData.z && currentPlotData.z.values) {
+          typeToDraw = 'scatter3d';
+        } else if (currentPlotData.y && currentPlotData.y.has_uncertainty) {
+          typeToDraw = 'errorbar';
+        } else {
+          typeToDraw = 'line2d';
+        }
+      }
+      
+      let traces = [];
+      let layout = {
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: '#e2e8f0', family: 'Inter, sans-serif' },
+        margin: { t: 40, r: 20, b: 50, l: 60 },
+        autosize: true
+      };
+      
+      if (typeToDraw === 'line2d' || typeToDraw === 'errorbar') {
+        const xData = currentPlotData.x ? currentPlotData.x.values : null;
+        const yData = currentPlotData.y ? currentPlotData.y.values : null;
+        
+        if (!yData) return;
+        
+        const trace = {
+          x: xData || Array.from({length: yData.length}, (_, i) => i),
+          y: yData,
+          mode: 'lines+markers',
+          type: 'scatter',
+          name: currentPlotData.title || 'Data',
+          line: { color: '#818cf8', width: 2 },
+          marker: { color: '#6366f1', size: 6 }
+        };
+        
+        // Handle Uncertainty error bars
+        if (typeToDraw === 'errorbar') {
+          if (currentPlotData.y.has_uncertainty && currentPlotData.y.uncertainty) {
+            trace.error_y = {
+              type: 'data',
+              array: currentPlotData.y.uncertainty,
+              visible: true,
+              color: 'rgba(239, 68, 68, 0.7)',
+              thickness: 1.5,
+              width: 3
+            };
+          }
+          if (currentPlotData.x && currentPlotData.x.has_uncertainty && currentPlotData.x.uncertainty) {
+            trace.error_x = {
+              type: 'data',
+              array: currentPlotData.x.uncertainty,
+              visible: true,
+              color: 'rgba(239, 68, 68, 0.7)',
+              thickness: 1.5,
+              width: 3
+            };
+          }
+        }
+        
+        traces.push(trace);
+        
+        let xLabel = currentPlotData.xlabel || 'X';
+        if (currentPlotData.x && currentPlotData.x.unit) {
+          xLabel += ` (${currentPlotData.x.unit})`;
+        }
+        
+        let yLabel = currentPlotData.ylabel || 'Y';
+        if (currentPlotData.y && currentPlotData.y.unit) {
+          yLabel += ` (${currentPlotData.y.unit})`;
+        }
+        
+        layout.title = {
+          text: currentPlotData.title,
+          font: { color: '#e2e8f0', size: 14 }
+        };
+        layout.xaxis = {
+          title: { text: xLabel, font: { color: '#94a3b8', size: 12 } },
+          gridcolor: '#1e2535',
+          zerolinecolor: '#252d3d',
+          tickfont: { color: '#64748b' }
+        };
+        layout.yaxis = {
+          title: { text: yLabel, font: { color: '#94a3b8', size: 12 } },
+          gridcolor: '#1e2535',
+          zerolinecolor: '#252d3d',
+          tickfont: { color: '#64748b' }
+        };
+      } 
+      else if (typeToDraw === 'scatter3d') {
+        const xData = currentPlotData.x ? currentPlotData.x.values : null;
+        const yData = currentPlotData.y ? currentPlotData.y.values : null;
+        const zData = currentPlotData.z ? currentPlotData.z.values : null;
+        
+        if (!xData || !yData || !zData) return;
+        
+        const trace = {
+          x: xData,
+          y: yData,
+          z: zData,
+          mode: 'markers+lines',
+          type: 'scatter3d',
+          line: { color: '#818cf8', width: 2 },
+          marker: {
+            color: '#6366f1',
+            size: 4,
+            opacity: 0.8
+          }
+        };
+        
+        traces.push(trace);
+        
+        let xLabel = currentPlotData.xlabel || 'X';
+        if (currentPlotData.x && currentPlotData.x.unit) xLabel += ` (${currentPlotData.x.unit})`;
+        
+        let yLabel = currentPlotData.ylabel || 'Y';
+        if (currentPlotData.y && currentPlotData.y.unit) yLabel += ` (${currentPlotData.y.unit})`;
+        
+        let zLabel = currentPlotData.zlabel || 'Z';
+        if (currentPlotData.z && currentPlotData.z.unit) zLabel += ` (${currentPlotData.z.unit})`;
+        
+        layout.title = {
+          text: currentPlotData.title,
+          font: { color: '#e2e8f0', size: 14 }
+        };
+        layout.scene = {
+          xaxis: {
+            title: { text: xLabel, font: { color: '#94a3b8' } },
+            gridcolor: '#1e2535',
+            backgroundcolor: '#0b0e14',
+            showbackground: true,
+            tickfont: { color: '#64748b' }
+          },
+          yaxis: {
+            title: { text: yLabel, font: { color: '#94a3b8' } },
+            gridcolor: '#1e2535',
+            backgroundcolor: '#0b0e14',
+            showbackground: true,
+            tickfont: { color: '#64748b' }
+          },
+          zaxis: {
+            title: { text: zLabel, font: { color: '#94a3b8' } },
+            gridcolor: '#1e2535',
+            backgroundcolor: '#0b0e14',
+            showbackground: true,
+            tickfont: { color: '#64748b' }
+          }
+        };
+      }
+      else if (typeToDraw === 'parallel') {
+        const dataObj = currentPlotData.data;
+        if (!dataObj) return;
+        
+        const dimensions = Object.keys(dataObj).map(key => {
+          const col = dataObj[key];
+          return {
+            label: key + (col.unit ? ` (${col.unit})` : ''),
+            values: col.values
+          };
+        });
+        
+        const trace = {
+          type: 'parcoords',
+          line: {
+            color: '#818cf8',
+            colorscale: 'Jet'
+          },
+          dimensions: dimensions
+        };
+        
+        traces.push(trace);
+        layout.title = {
+          text: currentPlotData.title,
+          font: { color: '#e2e8f0', size: 14 }
+        };
+        layout.margin = { t: 60, r: 40, b: 30, l: 40 };
+      }
+      else if (typeToDraw === 'splom') {
+        const dataObj = currentPlotData.data;
+        if (!dataObj) return;
+        
+        const dimensions = Object.keys(dataObj).map(key => {
+          const col = dataObj[key];
+          return {
+            label: key + (col.unit ? ` (${col.unit})` : ''),
+            values: col.values
+          };
+        });
+        
+        const trace = {
+          type: 'splom',
+          dimensions: dimensions,
+          marker: {
+            color: '#818cf8',
+            size: 5,
+            line: { color: '#6366f1', width: 0.5 },
+            opacity: 0.7
+          }
+        };
+        
+        traces.push(trace);
+        layout.title = {
+          text: currentPlotData.title,
+          font: { color: '#e2e8f0', size: 14 }
+        };
+      }
+      
+      Plotly.newPlot(chartDiv, traces, layout, { responsive: true, displayModeBar: false });
+    }
+
+    chartTypeSelect.addEventListener('change', drawPlot);
+    clearPlotBtn.addEventListener('click', () => {
+      currentPlotData = null;
+      document.getElementById('noPlotData').style.display = 'flex';
+      Plotly.purge('plotlyChart');
+    });
+
+    window.addEventListener('resize', () => {
+      if (currentPlotData && visualizerContent.style.display !== 'none') {
+        Plotly.Plots.resize('plotlyChart');
+      }
+    });
 
     // Initialize CodeMirror editor
     function initEditor() {
@@ -208,6 +560,93 @@ print("Successfully loaded measurekit into sys.path!")
         setProgress(80, "Pre-loading NumPy library...");
         // Pre-load numpy since many scripts use it
         await pyodide.loadPackage('numpy');
+
+        setProgress(90, "Loading plotting utilities...");
+        await pyodide.runPythonAsync(`
+import js
+import json
+
+def plot(x=None, y=None, z=None, data=None, **kwargs):
+    """
+    MeasureKit Aesthetic Plotting Utility
+    Supports:
+      - plot(x, y)               -> 2D Line/Scatter with optional unit and uncertainty
+      - plot(x, y, z)            -> 3D Scatter with optional unit and uncertainty
+      - plot(data=dict)          -> N-D Parallel Coordinates or SPLOM
+    """
+    def serialize_quantity(q):
+        if q is None:
+            return None
+            
+        mag = q
+        unc = None
+        unit_str = ""
+        has_unc = False
+        
+        # Extract magnitude and units if MeasureKit Quantity
+        if hasattr(q, 'magnitude'):
+            mag = q.magnitude
+            if hasattr(q, 'units'):
+                unit_str = str(q.units)
+            elif hasattr(q, 'unit'):
+                unit_str = str(q.unit)
+            
+            if hasattr(q, 'uncertainty') and q.uncertainty is not None:
+                unc = q.uncertainty
+                has_unc = True
+        
+        # Convert numpy arrays/iterables to list
+        import numpy as np
+        if isinstance(mag, np.ndarray):
+            mag = mag.tolist()
+        elif hasattr(mag, 'tolist'):
+            mag = mag.tolist()
+        elif hasattr(mag, '__iter__') and not isinstance(mag, (str, dict)):
+            mag = list(mag)
+            
+        if isinstance(unc, np.ndarray):
+            unc = unc.tolist()
+        elif hasattr(unc, 'tolist') and unc is not None:
+            unc = unc.tolist()
+        elif hasattr(unc, '__iter__') and not isinstance(unc, (str, dict)) and unc is not None:
+            unc = list(unc)
+            
+        return {
+            "values": mag,
+            "uncertainty": unc,
+            "unit": unit_str,
+            "has_uncertainty": has_unc
+        }
+
+    # Case 1: Dictionary data passed (for Parallel Coordinates or SPLOM)
+    serialized_data = {}
+    if isinstance(data, dict):
+        for k, v in data.items():
+            serialized_data[k] = serialize_quantity(v)
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            serialized_data[k] = serialize_quantity(v)
+            
+    payload = {
+        "x": serialize_quantity(x) if not isinstance(x, dict) else None,
+        "y": serialize_quantity(y),
+        "z": serialize_quantity(z),
+        "data": serialized_data if serialized_data else None,
+        "title": kwargs.get("title", "MeasureKit Interactive Visualizer"),
+        "xlabel": kwargs.get("xlabel", ""),
+        "ylabel": kwargs.get("ylabel", ""),
+        "zlabel": kwargs.get("zlabel", ""),
+        "type": kwargs.get("type", "auto"),
+        "options": {k: str(v) if not isinstance(v, (int, float, bool, list, dict)) else v for k, v in kwargs.items()}
+    }
+    
+    # Send JSON string to JS
+    js.updatePlot(json.dumps(payload))
+
+# Inject plot function into the global namespace
+import builtins
+builtins.plot = plot
+`);
 
         const defaultCode = `from measurekit import Q_
 
@@ -357,6 +796,20 @@ sys.stderr = io.StringIO()
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    });
+
+    // BroadcastChannel for warm playground execution
+    const bc = new BroadcastChannel('measurekit-playground');
+    bc.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'playground-ping') {
+        bc.postMessage({ type: 'playground-pong' });
+      } else if (e.data && e.data.type === 'playground-load-code') {
+        const code = e.data.code;
+        if (editor) {
+          editor.setValue(code);
+          setTimeout(runCode, 50);
+        }
+      }
     });
 
     // Start loading process
@@ -588,6 +1041,108 @@ sys.stderr = io.StringIO()
   .console-pane {
     flex: 1;
     background: #06080b;
+  }
+
+  /* Tabs and Visualizer styles */
+  .pane-tab-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  .pane-tab-btn:hover {
+    color: var(--text2);
+  }
+  .pane-tab-btn.active {
+    color: var(--text);
+    border-bottom: 2px solid var(--accent);
+  }
+  .badge-new {
+    background: var(--accent);
+    color: white;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    line-height: 1;
+    margin-left: 0.25rem;
+    font-weight: bold;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .visualizer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 0.5rem;
+  }
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .visualizer-toolbar select {
+    background: var(--panel2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    outline: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .visualizer-toolbar select:hover {
+    border-color: var(--accent);
+  }
+  .no-plot-data {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 13, 19, 0.95);
+    color: var(--text2);
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+    z-index: 10;
+  }
+  .no-plot-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .no-plot-data p {
+    margin-bottom: 1.25rem;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+  .no-plot-example {
+    background: #0f1318;
+    border: 1px solid var(--border2);
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    text-align: left;
+    color: var(--accent2);
+    width: 100%;
+    max-width: 340px;
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: auto;
+    margin: 0;
   }
   .console-output {
     flex: 1;

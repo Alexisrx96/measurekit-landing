@@ -34,6 +34,7 @@ const navItems = [
   { label: isSpanish ? "Tutoriales" : "Tutorials", href: `${langPrefix}/tutorials`, section: "tutorials", icon: "📚" },
   { label: isSpanish ? "Playground" : "Playground", href: `${langPrefix}/playground`, section: "playground", icon: "🚀" },
   { label: isSpanish ? "CLI y REPL" : "CLI & REPL", href: `${langPrefix}/cli`, section: "cli", icon: "💻" },
+  { label: isSpanish ? "Extensión VS Code" : "VS Code Extension", href: `${langPrefix}/vscode`, section: "vscode", icon: "🔌" },
   { label: isSpanish ? "Historial" : "Changelog", href: `${langPrefix}/changelog`, section: "changelog", icon: "📋" },
 ];
 
@@ -170,6 +171,38 @@ const t = {
     </div>
 
     <script define:vars={{ isSpanish }}>
+      // BroadcastChannel warm routing helper
+      function sendToPlayground(rawCode, fromUrl = "") {
+        if (!rawCode) return;
+        
+        const bc = new BroadcastChannel('measurekit-playground');
+        let playgroundResponded = false;
+        
+        const bcListener = (e) => {
+          if (e.data && e.data.type === 'playground-pong') {
+            playgroundResponded = true;
+            bc.postMessage({ type: 'playground-load-code', code: rawCode });
+          }
+        };
+        bc.addEventListener('message', bcListener);
+        
+        bc.postMessage({ type: 'playground-ping' });
+        
+        setTimeout(() => {
+          bc.removeEventListener('message', bcListener);
+          bc.close();
+          
+          if (playgroundResponded) {
+            window.open('', 'measurekit_playground');
+          } else {
+            const encoded = btoa(unescape(encodeURIComponent(rawCode)));
+            const isSp = window.location.pathname.startsWith('/es');
+            const targetUrl = `${isSp ? '/es' : ''}/playground?code=${encodeURIComponent(encoded)}` + (fromUrl ? `&from=${encodeURIComponent(fromUrl)}` : '');
+            window.open(targetUrl, 'measurekit_playground');
+          }
+        }, 100);
+      }
+
       // Mobile menu toggle
       const menuToggle = document.getElementById('menuToggle');
       const sidebar = document.getElementById('sidebar');
@@ -229,9 +262,6 @@ const t = {
           }
           
           if (rawCode) {
-            const encoded = btoa(unescape(encodeURIComponent(rawCode)));
-            const isSp = window.location.pathname.startsWith('/es');
-            
             // Build the backlink to resume state
             let fromUrl = window.location.pathname;
             if (activeStepPane && activeTutorialContent) {
@@ -239,28 +269,43 @@ const t = {
               const tutorialId = activeTutorialContent.id.replace('Tutorial', ''); // e.g. "sensor"
               fromUrl += `?tutorial=${tutorialId}&step=${step}`;
             }
-            
-            window.location.href = `${isSp ? '/es' : ''}/playground?code=${encodeURIComponent(encoded)}&from=${encodeURIComponent(fromUrl)}`;
+            sendToPlayground(rawCode, fromUrl);
           }
         });
       });
 
-      // Code block copy buttons
+      // Code block copy and run buttons
       document.querySelectorAll('pre').forEach(pre => {
-        const btn = document.createElement('button');
-        btn.className = 'pre-copy-btn';
-        btn.title = isSpanish ? 'Copiar código' : 'Copy code';
-        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        // Do not add buttons inside the playground editor/console itself
+        if (window.location.pathname.includes('/playground')) return;
+
         pre.style.position = 'relative';
-        pre.appendChild(btn);
-        btn.addEventListener('click', () => {
+
+        // 1. Copy Button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'pre-copy-btn';
+        copyBtn.title = isSpanish ? 'Copiar código' : 'Copy code';
+        copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        pre.appendChild(copyBtn);
+        copyBtn.addEventListener('click', () => {
           const code = pre.querySelector('code')?.textContent || '';
           navigator.clipboard.writeText(code).then(() => {
-            btn.innerHTML = '✓';
+            copyBtn.innerHTML = '✓';
             setTimeout(() => {
-              btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+              copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
             }, 2000);
           });
+        });
+
+        // 2. Run Button
+        const runBtn = document.createElement('button');
+        runBtn.className = 'pre-run-btn';
+        runBtn.title = isSpanish ? 'Ejecutar en Playground' : 'Run in Playground';
+        runBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" style="margin-right:3px; display:inline-block; vertical-align:middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>' + (isSpanish ? 'Ejecutar' : 'Run');
+        pre.appendChild(runBtn);
+        runBtn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || '';
+          sendToPlayground(code, window.location.pathname);
         });
       });
 
@@ -273,7 +318,7 @@ const t = {
         { title: "Installation", url: "/install", excerpt: "Install with pip or uv for base, native Rust or all backends.", lang: "en" },
         { title: "Building from source", url: "/install#building-from-source", excerpt: "Compiling maturin Rust core from source.", lang: "en" },
         { title: "Quick Start", url: "/quickstart", excerpt: "Create first quantity, convert, uncertainty propagation.", lang: "en" },
-        { title: "Grammar notation", url: "/quickstart#grammar-notation", excerpt: "MeasureNote syntax in Python interpreter.", lang: "en" },
+        { title: "Grammar notation", url: "/quickstart#grammar-notation", excerpt: "MeasureKit grammar syntax in Python interpreter.", lang: "en" },
         { title: "Terminal calculator", url: "/quickstart#terminal-calculator", excerpt: "CLI options and interactive REPL.", lang: "en" },
         { title: "User Guide", url: "/guide", excerpt: "Full guide covering physical quantities and unit singletons.", lang: "en" },
         { title: "Absolute vs Delta Temperature", url: "/guide#arithmetic", excerpt: "Celsius and Fahrenheit offsets versus delta units.", lang: "en" },
@@ -283,13 +328,19 @@ const t = {
         { title: "JAX Stateless Functional API", url: "/guide#functional", excerpt: "FunctionalState pytree tracking for JAX JIT.", lang: "en" },
         { title: "JIT Tracing & Zero-Overhead", url: "/guide#jit", excerpt: "torch.compile dispatching and raw GPU kernels.", lang: "en" },
         { title: "SymPy Symbolic Math", url: "/guide#symbolic", excerpt: "SymbolicQuantity, Equation solving, diff and integrate.", lang: "en" },
+        { title: "Native Symbolic Math Engine", url: "/guide#native-symbolic", excerpt: "Zero-dependency algebraic simplification and exact derivatives in Rust/Python fallback.", lang: "en" },
+        { title: "Chemistry & Reaction Tracking", url: "/guide#chemistry", excerpt: "Substance-aware mass-to-mole conversions, reaction balancing, and yields.", lang: "en" },
+        { title: "AOT Physics Compiler", url: "/guide#aot-compiler", excerpt: "Bakes unit-checked functions into raw-float kernels with zero overhead.", lang: "en" },
+        { title: "Symbolic Regression", url: "/guide#symbolic-regression", excerpt: "Fits dimensionally consistent formulas to datasets using genetic programming.", lang: "en" },
+        { title: "Unit-Aware Plotting", url: "/guide#plotting", excerpt: "Built-in plotting utilities with automatic units, error bars, and covariance maps.", lang: "en" },
         { title: "Pandas Accessor", url: "/guide#pandas", excerpt: "Series extension array and custom measurekit[unit] type.", lang: "en" },
         { title: "Serialization (IO)", url: "/guide#io", excerpt: "HDF5 dataset attributes and xarray accessories.", lang: "en" },
         { title: "API Reference", url: "/api", excerpt: "Quantity properties and methods lookup table.", lang: "en" },
         { title: "Module functions", url: "/api#module-functions", excerpt: "system_context, propagation_mode, jit, save_state.", lang: "en" },
         { title: "Exceptions", url: "/api#exceptions", excerpt: "IncompatibleUnitsError, UnknownUnitError, ConversionError.", lang: "en" },
         { title: "Examples", url: "/examples", excerpt: "Kinematics, Force, Pressure, Temperature, Uncertainty, NumPy, SymPy, JIT.", lang: "en" },
-        { title: "CLI & REPL Details", url: "/cli", excerpt: "MeasureNote grammar statements and notes piping.", lang: "en" },
+        { title: "CLI & REPL Details", url: "/cli", excerpt: "MeasureKit grammar statements and script piping.", lang: "en" },
+        { title: "VS Code Extension", url: "/vscode", excerpt: "Install and configure the MeasureKit Meta-Lang (MKML) editor extension.", lang: "en" },
         { title: "Changelog", url: "/changelog", excerpt: "Timeline release notes from v0.1.0 to v0.1.8.", lang: "en" },
 
         // Spanish
@@ -307,13 +358,19 @@ const t = {
         { title: "JAX API Funcional sin Estado", url: "/es/guide#functional", excerpt: "Uso de FunctionalState como pytree para JAX JIT.", lang: "es" },
         { title: "Compilación JIT y Trazado", url: "/es/guide#jit", excerpt: "Integración torch.compile y kernels nativos en GPU.", lang: "es" },
         { title: "Matemática Simbólica SymPy", url: "/es/guide#symbolic", excerpt: "SymbolicQuantity, resolución de ecuaciones, derivadas e integrales.", lang: "es" },
+        { title: "Matemática Simbólica Nativa", url: "/es/guide#native-symbolic", excerpt: "Simplificación algebraica y derivadas exactas sin dependencias en Rust.", lang: "es" },
+        { title: "Química y Reacciones", url: "/es/guide#chemistry", excerpt: "Conversión de masa a moles por especie, balanceo de reacciones y rendimiento.", lang: "es" },
+        { title: "Compilador AOT de Física", url: "/es/guide#aot-compiler", excerpt: "Compila funciones validadas a código sin overhead en ejecución.", lang: "es" },
+        { title: "Regresión Simbólica", url: "/es/guide#symbolic-regression", excerpt: "Ajuste de fórmulas dimensionalmente consistentes mediante programación genética.", lang: "es" },
+        { title: "Gráficos con Unidades", url: "/es/guide#plotting", excerpt: "Visualizaciones integradas con formateo de unidades y covarianza.", lang: "es" },
         { title: "Pandas e Integraciones", url: "/es/guide#pandas", excerpt: "Series extendidas y tipo measurekit[m/s].", lang: "es" },
         { title: "Serialización (IO)", url: "/es/guide#io", excerpt: "Formatos HDF5 y accessor para DataArray de xarray.", lang: "es" },
         { title: "Referencia API", url: "/es/api", excerpt: "Tabla de referencia de Quantity, propiedades y métodos.", lang: "es" },
         { title: "Funciones de Módulo", url: "/es/api#module-functions", excerpt: "system_context, propagation_mode, jit, save_state.", lang: "es" },
         { title: "Excepciones", url: "/es/api#exceptions", excerpt: "IncompatibleUnitsError, UnknownUnitError, ConversionError.", lang: "es" },
         { title: "Ejemplos Prácticos", url: "/es/examples", excerpt: "Cinemática, Fuerza, Presión, Temperatura, Péndulo, NumPy, JIT.", lang: "es" },
-        { title: "CLI y REPL detalles", url: "/es/cli", excerpt: "Gramática MeasureNote y ejecución por tuberías.", lang: "es" },
+        { title: "CLI y REPL detalles", url: "/es/cli", excerpt: "Gramática MeasureKit y ejecución por tuberías.", lang: "es" },
+        { title: "Extensión VS Code", url: "/es/vscode", excerpt: "Instalación y configuración de la extensión de editor para MeasureKit Meta-Lang (MKML).", lang: "es" },
         { title: "Historial", url: "/es/changelog", excerpt: "Notas de lanzamiento de la versión v0.1.0 a la v0.1.8.", lang: "es" },
       ];
 
@@ -755,7 +812,7 @@ const t = {
     min-width: 0;
   }
   .content-inner {
-    max-width: 900px;
+    max-width: none;
     margin: 0 auto;
     padding: 2.5rem 2.5rem 5rem;
   }
@@ -807,6 +864,18 @@ const t = {
   }
   pre:hover .pre-copy-btn { opacity: 1; }
   .pre-copy-btn:hover { color: var(--text); }
+
+  .pre-run-btn {
+    position: absolute; top: 0.75rem; right: 3.25rem;
+    background: var(--panel2); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 0.3rem 0.5rem;
+    color: var(--text3); cursor: pointer;
+    opacity: 0; transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+    display: flex; align-items: center;
+    font-size: 0.72rem; font-weight: 600;
+  }
+  pre:hover .pre-run-btn { opacity: 1; }
+  .pre-run-btn:hover { color: var(--text); border-color: var(--accent); }
 
   /* ── Cards ── */
   .card {
@@ -912,7 +981,7 @@ const t = {
   /* ── Desktop Wide Screen / Dead Space Reduction ── */
   @media (min-width: 1200px) {
     .content-inner:has(.toc-card) {
-      max-width: 1200px;
+      max-width: none;
       padding-right: 320px;
       position: relative;
     }

@@ -21,14 +21,14 @@ const api = [
     desc: "The core class representing a physical quantity — a value with a unit and optional uncertainty.",
     params: [],
     returns: null,
-    example: `from measurekit import Quantity\n\nq = Quantity.from_input(10, "m")\nprint(q.value)     # 10\nprint(q.unit)      # Unit("m")\nprint(q.dimension) # [length]`,
+    example: `from measurekit import Quantity\n\nq = Quantity.from_input(10, "m")\nprint(q.magnitude)  # 10.0\nprint(q.unit)       # Unit("m")\nprint(q.dimension)  # [length]`,
     methods: [
       { name: ".to(unit_str)", desc: "Returns a new Quantity converted to the given unit." },
-      { name: ".ito(unit_str)", desc: "Converts in-place to the given unit." },
+      { name: ".ito(unit_str)", desc: "Does not exist in the library. Use q = q.to(unit_str) instead." },
       { name: ".to_base()", desc: "Converts to the SI base unit representation." },
       { name: ".diff(variable)", desc: "Symbolic differentiation (requires [symbolic] extra)." },
       { name: ".magnitude", desc: "Raw numeric value (always a float/array, never a Quantity)." },
-      { name: ".value", desc: "Same as magnitude." },
+      { name: ".m", desc: "Shorthand alias for .magnitude (pint-compatible)." },
       { name: ".unit", desc: "The Unit object attached to this Quantity." },
       { name: ".uncertainty", desc: "The standard deviation (or Uncertainty object) if set." },
       { name: ".dimension", desc: "The dimensional signature, e.g. [length²]." },
@@ -89,6 +89,7 @@ const grammarApi = [
       <li><a href="#grammar-api">Grammar API</a></li>
       <li><a href="#exceptions">Exceptions</a></li>
       <li><a href="#extracted-api">Extracted API</a></li>
+      <li><a href="#extensions-api">Extensions & Advanced APIs</a></li>
       <li><a href="#units-module">Units module</a></li>
     </ul>
   </div>
@@ -168,13 +169,14 @@ t = Q_(torch.tensor([1.0, 2.0]), "kg")</code></pre>
     <table>
       <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td><code>.to(unit_str)</code></td><td><code>Quantity</code></td><td>Returns a new Quantity converted to the given unit string. Raises if units are incompatible.</td></tr>
-        <tr><td><code>.ito(unit_str)</code></td><td><code>None</code></td><td>Converts in-place. Mutates the quantity's value and unit.</td></tr>
+        <tr><td><code>.to(unit_str)</code></td><td><code>Quantity</code></td><td>Returns a new Quantity converted to the given unit string. Raises <code>IncompatibleUnitsError</code> if units are incompatible.</td></tr>
         <tr><td><code>.to_base()</code></td><td><code>Quantity</code></td><td>Returns a new Quantity in SI base units (m, kg, s, A, K, mol, cd).</td></tr>
         <tr><td><code>.diff(var)</code></td><td><code>Quantity</code></td><td>Symbolic differentiation. Requires <code>[symbolic]</code> extra. <code>var</code> is a Quantity with symbolic magnitude.</td></tr>
-        <tr><td><code>.__add__, __sub__</code></td><td><code>Quantity</code></td><td>Addition/subtraction. Raises DimensionError if units are incompatible.</td></tr>
+        <tr><td><code>.__add__, __sub__</code></td><td><code>Quantity</code></td><td>Addition/subtraction. Raises <code>IncompatibleUnitsError</code> if units are incompatible.</td></tr>
         <tr><td><code>.__mul__, __truediv__</code></td><td><code>Quantity</code></td><td>Multiplication/division. Combines units automatically.</td></tr>
         <tr><td><code>.__pow__(n)</code></td><td><code>Quantity</code></td><td>Power. <code>Q_(2, "m") ** 3</code> → <code>8 m³</code>.</td></tr>
+        <tr><td><code>.dot(other)</code></td><td><code>Quantity</code></td><td>Computes dot product for vector quantities.</td></tr>
+        <tr><td><code>.cross(other)</code></td><td><code>Quantity</code></td><td>Computes cross product for vector quantities.</td></tr>
       </tbody>
     </table>
 
@@ -340,6 +342,55 @@ except IncompatibleUnitsError as e:
             <td>{method.docstring || "No docstring provided."}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Extensions & Advanced APIs -->
+  <h2 id="extensions-api">Extensions & Advanced APIs</h2>
+  <div class="api-card">
+    <h3>Chemistry Extension (<code>measurekit.ext.chemistry</code>)</h3>
+    <table>
+      <thead><tr><th>Class / Function</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Species(formula: str)</code></td><td>Chemical species representation. Automatically parses nested formula strings (e.g. <code>"Ca(NO3)2"</code>) and computes <code>.molar_mass</code> with uncertainty.</td></tr>
+        <tr><td><code>Reaction.from_string(eq: str)</code></td><td>Parses and balances chemical equations (e.g. <code>"2 H2 + O2 -> 2 H2O"</code>). Provides <code>.reactant_coeffs</code> and <code>.product_coeffs</code>.</td></tr>
+        <tr><td><code>Reaction.calculate(**reactants)</code></td><td>Calculates yield and limiting reactant given reactant Quantity objects, returning a <code>ReactionResult</code>.</td></tr>
+        <tr><td><code>molar_equivalency(species: Species)</code></td><td>Returns an equivalency list connecting mass (kg) and amount of substance (mol) using the species' molar mass.</td></tr>
+        <tr><td><code>arrhenius(A, Ea, T)</code></td><td>Computes rate constant $k = A e^&#123;-E_a / (RT)&#125;$ checking that the exponent is dimensionless.</td></tr>
+        <tr><td><code>gibbs_free_energy(dH, T, dS)</code></td><td>Computes Gibbs free energy change $\Delta G = \Delta H - T \Delta S$ with dimensional verification.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Native Symbolic Engine (<code>measurekit.domain.symbolic.native</code>)</h3>
+    <table>
+      <thead><tr><th>Class / Function</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>Expr.symbol(name: str)</code></td><td>Creates a symbolic variable node (leaf) in the expression tree.</td></tr>
+        <tr><td><code>Expr.number(val: float)</code></td><td>Creates a numerical literal node in the expression tree.</td></tr>
+        <tr><td><code>Expr.Quantity(name: str, unit: CompoundUnit)</code></td><td>Creates a unit-carrying symbolic variable node.</td></tr>
+        <tr><td><code>.simplify()</code></td><td>Recursive algebraic simplification (e.g., identity laws, inverse laws, term collection).</td></tr>
+        <tr><td><code>.diff(var_name: str)</code></td><td>Statically differentiates the expression with respect to a variable name, preserving unit rules.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Physics Compiler & Symbolic Regression (<code>measurekit.ext</code>)</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>compile_physics_model(func, input_units, output_unit)</code></td><td>Traces a Python function, validates units, and outputs a unit-stripped raw-float kernel via <code>exec()</code>.</td></tr>
+        <tr><td><code>SymbolicRegressor(inputs, target, allowed_operations, ...)</code></td><td>Genetic programming regressor to fit a dimensionally valid formula to datasets. Returns a <code>FittedFormula</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top: 1.5rem;">Unit-Aware Plotting (<code>measurekit.plotting</code> / <code>Quantity</code> methods)</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>.plot(x, kind, ax)</code></td><td>Aesthetic plotting of this physical quantity, adding unit labels and error bars automatically.</td></tr>
+        <tr><td><code>.plot_covariance(ax)</code></td><td>Plots the covariance or correlation matrix of this Quantity if uncertainty correlation is tracked.</td></tr>
+        <tr><td><code>.plot_slices(slice_dim, ...)</code></td><td>Plots multiple 2D slice grids of a 3D+ Quantity for field visualization.</td></tr>
+        <tr><td><code>.plot_interactive(slice_dims, ...)</code></td><td>Creates an interactive UI plot with sliders to scrub through N-D dimensions.</td></tr>
       </tbody>
     </table>
   </div>

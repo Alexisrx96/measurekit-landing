@@ -92,6 +92,26 @@
           "docstring": "Returns a new Quantity with the specified uncertainty."
         },
         {
+          "name": "plot",
+          "signature": "plot(self, x, kind, ax)",
+          "docstring": "Aesthetic plotting of this physical quantity."
+        },
+        {
+          "name": "plot_slices",
+          "signature": "plot_slices(self, slice_dim, num_slices, cmap)",
+          "docstring": "Plots multiple 2D slice grids of a 3D+ Quantity for N-D field visualization."
+        },
+        {
+          "name": "plot_interactive",
+          "signature": "plot_interactive(self, slice_dims, cmap)",
+          "docstring": "Creates an interactive GUI plot with sliders to scrub through N-D dimensions."
+        },
+        {
+          "name": "plot_covariance",
+          "signature": "plot_covariance(self, ax)",
+          "docstring": "Plots the covariance/correlation matrix of this Quantity if available."
+        },
+        {
           "name": "to",
           "signature": "to(self, target_unit)",
           "docstring": "Converts the quantity to a different unit or moves to a device."

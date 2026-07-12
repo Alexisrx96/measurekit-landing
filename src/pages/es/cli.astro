@@ -21,15 +21,15 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     <div class="mode-card">
       <div class="mode-num">2</div>
       <h3>Evaluación de archivos</h3>
-      <p>Envía por tubería un archivo con declaraciones en MeasureNote. Todos los resultados se imprimen en secuencia.</p>
-      <pre><code>python -m measurekit &lt; notas.mnml</code></pre>
+      <p>Envía por tubería un archivo con declaraciones en MeasureKit. Todos los resultados se imprimen en secuencia.</p>
+      <pre><code>python -m measurekit &lt; notas.mkml</code></pre>
     </div>
     <div class="mode-card">
       <div class="mode-num">3</div>
       <h3>REPL Interactivo</h3>
       <p>Inicia una sesión interactiva en la consola. Conserva el historial de comandos. Sal del intérprete con Ctrl+D.</p>
       <pre><code>python -m measurekit
-mk&gt; ...</code></pre>
+      mk&gt; ...</code></pre>
     </div>
   </div>
 
@@ -85,8 +85,8 @@ measurekit repl                          # Inicia el REPL interactivo
 measurekit repl "500 N / 2 m^2 => kPa"  # Evalúa una única expresión
 measurekit sync-types                    # Regenera los archivos stub de tipado estático</code></pre>
 
-  <h2>Sintaxis de MeasureNote</h2>
-  <p>El REPL y los scripts de consola utilizan la sintaxis de MeasureNote (MNML):</p>
+  <h2>Sintaxis de MeasureKit</h2>
+  <p>El REPL y los scripts de consola utilizan la sintaxis de MeasureKit (MKML):</p>
   <table>
     <thead>
       <tr><th>Sintaxis</th><th>Ejemplo</th><th>Descripción</th></tr>
@@ -135,9 +135,9 @@ measurekit sync-types                    # Regenera los archivos stub de tipado 
     </tbody>
   </table>
 
-  <h2>Escribir archivos de notas</h2>
-  <p>Crea archivos con la extensión <code>.mnml</code> y envíalos por tubería a MeasureKit:</p>
-  <pre><code># notas.mnml — análisis de circuito
+  <h2>Escribir archivos de script</h2>
+  <p>Crea archivos con la extensión <code>.mkml</code> y envíalos por tubería a MeasureKit:</p>
+  <pre><code># notas.mkml — análisis de circuito
 V  = 24 V
 R1 = 100 Ω
 R2 = 150 Ω
@@ -153,7 +153,7 @@ P = V * I
 
 I => mA
 P => W</code></pre>
-  <pre><code>python -m measurekit &lt; notas.mnml
+  <pre><code>python -m measurekit &lt; notas.mkml
 # 96.0 mA
 # 2.304 W</code></pre>
 
@@ -175,6 +175,10 @@ P => W</code></pre>
       <h3>⚠️ Caracteres especiales</h3>
       <p>Determinados caracteres especiales (como <code>^</code> o <code>&gt;</code>) pueden ser interpretados por la shell de comandos. Se recomienda envolverlos entre comillas: <code>"m^2"</code>, <code>"=&gt;"</code>.</p>
     </div>
+  </div>
+
+  <div class="callout callout-info" style="margin-top: 2rem;">
+    <p><strong>Soporte para VS Code:</strong> ¿Quieres resaltado de sintaxis, autocompletado y ejecución con un solo clic de archivos MeasureKit? Visita la página de la <a href="/es/vscode">Extensión de VS Code</a>.</p>
   </div>
 </DocsLayout>
 

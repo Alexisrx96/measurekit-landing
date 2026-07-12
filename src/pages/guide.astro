@@ -22,9 +22,13 @@ import DocsLayout from "../layouts/DocsLayout.astro";
       <li><a href="#functional">7. Stateless Functional API for JAX</a></li>
       <li><a href="#backends">8. Multi-Backend & Lazy Loading</a></li>
       <li><a href="#jit">9. JIT Compilation & Zero-Overhead Tracing</a></li>
-      <li><a href="#symbolic">10. Symbolic Math & Equation Solving</a></li>
+      <li><a href="#symbolic">10. Symbolic Math (SymPy & Native)</a></li>
       <li><a href="#pandas">11. Pandas Extensions & accessors</a></li>
       <li><a href="#io">12. HDF5, xarray & State Serialization</a></li>
+      <li><a href="#chemistry">13. Chemistry & Reaction Tracking</a></li>
+      <li><a href="#compiler">14. Ahead-of-Time Physics Compiler</a></li>
+      <li><a href="#regression">15. Dimensionally Constrained Regression</a></li>
+      <li><a href="#plotting">16. Unit-Aware Plotting</a></li>
     </ul>
   </div>
 
@@ -334,9 +338,14 @@ print(KE)  # 3500.0 J (subsequent runs operate on raw baked kernel)</code></pre>
 
   <!-- 10. Symbolic Math & Equation Solving -->
   <section class="guide-section">
-    <h2 id="symbolic">10. Symbolic Math & Equation Solving</h2>
+    <h2 id="symbolic">10. Symbolic Math (SymPy & Native)</h2>
     <p>
-      With the <code>[symbolic]</code> extra, MeasureKit integrates with SymPy to provide unit-aware symbolic math, derivatives, integration, and equation solving:
+      MeasureKit provides two distinct symbolic math frameworks: a SymPy-backed wrapper for algebraic equation solving, and a high-performance **Native Symbolic Math Engine** in Rust (with Python fallback) for zero-dependency simplification and exact analytical derivatives.
+    </p>
+
+    <h3>A. SymPy-Backed Equation Solver</h3>
+    <p>
+      Requires <code>pip install "measurekit[symbolic]"</code>. This framework integrates with SymPy to solve physical equations and carry units automatically:
     </p>
     <pre><code>from measurekit.domain.symbolic.quantity import SymbolicQuantity, Equation
 
@@ -359,6 +368,27 @@ print(v_expr)             # Expression(x/t) [m/s]
 # Evaluate the expression with concrete values
 res = t_solved.evaluate(x=Q_(100, "m"), v=Q_(5, "m/s"))
 print(res)                # 20.0 s</code></pre>
+
+    <h3>B. Native Symbolic Engine (Zero-Dependency)</h3>
+    <p>
+      Exposed under <code>measurekit.domain.symbolic.native</code>. This engine is implemented directly in Rust (packaged via PyO3, with a pure-Python fallback). It simplifies terms using algebraic rules (identity, inverse, constant folding, term collection) and computes analytical derivatives:
+    </p>
+    <pre><code>from measurekit.domain.symbolic.native import Expr
+from measurekit.domain.measurement.units import CompoundUnit
+
+# Define symbolic and quantity nodes
+x = Expr.symbol("x")
+k = Expr.Quantity("k", CompoundUnit("N/m"))
+const_val = Expr.number(2.0)
+
+# Build a symbolic expression: 2.0 * x - x
+expr = const_val * x - x
+print(expr.simplify())  # 1.0 * x (simplified algebraically)
+
+# Compute analytical derivatives
+poly_expr = x ** Expr.number(3.0)
+deriv = poly_expr.diff("x")
+print(deriv.simplify())  # 3.0 * x^2.0</code></pre>
   </section>
 
   <!-- 11. Pandas Extensions & Accessors -->
@@ -433,6 +463,154 @@ save_state("app_state.pkl")
 
 # Restores the store to the active context
 load_state("app_state.pkl")</code></pre>
+  </section>
+
+  <!-- 13. Chemistry & Reaction Tracking -->
+  <section class="guide-section">
+    <h2 id="chemistry">13. Chemistry & Reaction Tracking</h2>
+    <p>
+      MeasureKit includes a substance-aware chemistry extension under <code>measurekit.ext.chemistry</code>. It maps mass to moles and balances chemical equations using dynamic molar mass equivalencies, without polluting the high-performance tensor code paths.
+    </p>
+
+    <h3>A. Substance-Aware Unit Conversion</h3>
+    <p>
+      Because mass (grams) and amount of substance (moles) represent different base dimensions in physics, converting between them is normally an invalid operation. Using the molar mass of a specific chemical <code>Species</code> as an equivalency, MeasureKit allows substance-aware conversions:
+    </p>
+    <pre><code>from measurekit import Q_, equivalencies
+from measurekit.ext.chemistry import Species, molar_equivalency
+
+# Define water species (automatically computes molar mass + standard uncertainty)
+water = Species("H2O")
+print(water.molar_mass)  # 18.01528 +/- 0.0005 g/mol
+
+mass = Q_(18.015, "g")
+
+# Use the species molar equivalency context manager to convert
+with equivalencies(molar_equivalency(water)):
+    moles = mass.to("mol")
+    print(moles)         # 1.0 mol</code></pre>
+
+    <h3>B. Stoichiometry & Reaction Balancing</h3>
+    <p>
+      You can define reactions from a simple chemical equation string. MeasureKit balances the reaction coefficients and computes yields, identifying the limiting reactant and propagating laboratory weights uncertainties to the final products:
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import Reaction
+
+# Parse and automatically balance the reaction
+rxn = Reaction.from_string("H2 + O2 -> H2O")
+print(rxn.reactant_coeffs)  # [2, 1] (balanced: 2 H2 + O2 -> 2 H2O)
+
+# Calculate theoretical yield given initial masses with uncertainty
+result = rxn.calculate(
+    H2=Q_(10.0, "g", uncertainty=0.1),
+    O2=Q_(50.0, "g", uncertainty=0.2)
+)
+
+print("Limiting reactant:", result.limiting_reactant)  # O2
+print("H2O Yield:", result.yields["H2O"].to("g"))      # 56.31 +/- 0.22 g</code></pre>
+
+    <h3>C. Physical Chemistry Helpers</h3>
+    <p>
+      MeasureKit provides helpers for standard enthalpy/entropy lookups, Arrhenius kinetics, and Gibbs free energy calculations, validating that intermediate dimensional operations remain strictly consistent:
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import arrhenius, gibbs_free_energy, standard_enthalpy, standard_entropy
+
+# Rate constant calculation
+A = Q_(1e13, "s^-1")
+Ea = Q_(75.0, "kJ/mol")
+T = Q_(298.15, "K")
+k = arrhenius(A, Ea, T)
+print(k)  # ~0.72 s^-1
+
+# Gibbs Free Energy calculation
+dH = standard_enthalpy("H2O")       # Lookup value from periodic constants
+dS = Q_(-163.2, "J/(mol*K)")
+dG = gibbs_free_energy(dH, T, dS)
+print(dG.to("kJ/mol"))              # -237.1 kJ/mol</code></pre>
+  </section>
+
+  <!-- 14. Ahead-of-Time Physics Compiler -->
+  <section class="guide-section">
+    <h2 id="compiler">14. Ahead-of-Time Physics Compiler</h2>
+    <p>
+      If your application runs a hot loop of calculations where the object allocation overhead of <code>Quantity</code> is prohibitive, you can compile your physical formulas using <code>compile_physics_model</code> under <code>measurekit.ext.compiler</code>.
+    </p>
+    <p>
+      It traces the Python function once over unit-annotated placeholders to statically verify that every operation is dimensionally consistent, then generates a unit-stripped, high-performance raw-float kernel via <code>exec()</code> that executes at the speed of raw numbers.
+    </p>
+    <pre><code>from measurekit.ext.compiler import compile_physics_model
+
+def drag_force(density, velocity, area, drag_coeff):
+    return 0.5 * density * (velocity**2) * area * drag_coeff
+
+# Compile the formula into a raw-float kernel
+fast_drag = compile_physics_model(
+    drag_force,
+    input_units=&#123;
+        "density": "kg/m^3",
+        "velocity": "m/s",
+        "area": "m^2",
+        "drag_coeff": ""
+    &#125;,
+    output_unit="N"
+)
+
+# Subsequent calls are raw float operations with zero unit-checking overhead
+force = fast_drag(1.225, 10.0, 2.5, 0.3)
+print(force)  # 45.9375 (raw float, unit-verified statically!)</code></pre>
+  </section>
+
+  <!-- 15. Dimensionally Constrained Regression -->
+  <section class="guide-section">
+    <h2 id="regression">15. Dimensionally Constrained Regression</h2>
+    <p>
+      When fitting formulas to experimental data, normal symbolic regressors can produce physically nonsensical equations. <code>SymbolicRegressor</code> under <code>measurekit.ext.symbolic_regression</code> utilizes genetic programming over unit-valid expression trees.
+    </p>
+    <p>
+      Every mutation and crossover is dimensionally validated by construction. The engine structurally solves and fits the leading scale constant <code>k</code> and derives its units automatically as <code>target.unit / candidate.unit</code>.
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.symbolic_regression import SymbolicRegressor
+
+# Define experimental dataset with units
+t = Q_([1.0, 2.0, 3.0, 4.0, 5.0], "s", symbol="t")
+s = Q_([4.9, 19.5, 44.0, 78.3, 122.1], "m", symbol="s")
+
+regressor = SymbolicRegressor(
+    inputs=&#123;"t": t&#125;,
+    target=s,
+    allowed_operations=["Add", "Mul", "Pow"],
+    max_complexity=10,
+    seed=0
+)
+best_fit = regressor.fit()
+
+print(best_fit.formula_string)  # s = k * t^2.0
+print(best_fit.constants["k"])  # 4.887 m/s²</code></pre>
+  </section>
+
+  <!-- 16. Unit-Aware Plotting -->
+  <section class="guide-section">
+    <h2 id="plotting">16. Unit-Aware Plotting</h2>
+    <p>
+      MeasureKit integrates directly with plotting pipelines through the <code>measurekit.plotting</code> module and custom methods on the <code>Quantity</code> class. It formats axis labels with units and renders error bars from uncertainty data.
+    </p>
+    <pre><code>import numpy as np
+from measurekit import Q_
+
+# Create quantities
+x = Q_(np.linspace(0, 10, 100), "m")
+y = Q_(np.sin(x.magnitude), "m/s", uncertainty=0.05)
+
+# Use quantity's direct plot method (requires matplotlib)
+# Automatically formats labels: "X label (m)" and "Y label (m/s)"
+# Automatically draws 1σ error bars or shaded regions
+y.plot(x=x, kind="line")
+
+# Plot the covariance matrix if tracking correlated variables
+y.plot_covariance()</code></pre>
   </section>
 
   <div class="next-section">

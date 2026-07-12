@@ -22,9 +22,13 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
       <li><a href="#functional">7. API Funcional sin Estado para JAX</a></li>
       <li><a href="#backends">8. Multi-Backend y Carga Perezosa</a></li>
       <li><a href="#jit">9. Compilación JIT y Trazado Sin Overhead</a></li>
-      <li><a href="#symbolic">10. Matemática Simbólica y Resolución de Ecuaciones</a></li>
+      <li><a href="#symbolic">10. Matemática Simbólica (SymPy y Nativa)</a></li>
       <li><a href="#pandas">11. Extensiones y Accesores de Pandas</a></li>
       <li><a href="#io">12. HDF5, xarray y Serialización de Estado</a></li>
+      <li><a href="#chemistry">13. Química y Seguimiento de Reacciones</a></li>
+      <li><a href="#compiler">14. Compilador AOT de Física</a></li>
+      <li><a href="#regression">15. Regresión Simbólica Dimensional</a></li>
+      <li><a href="#plotting">16. Gráficos con Soporte de Unidades</a></li>
     </ul>
   </div>
 
@@ -334,9 +338,14 @@ print(KE)  # 3500.0 J (las ejecuciones posteriores operan sobre el kernel compil
 
   <!-- 10. Symbolic Math & Equation Solving -->
   <section class="guide-section">
-    <h2 id="symbolic">10. Matemática Simbólica y Resolución de Ecuaciones</h2>
+    <h2 id="symbolic">10. Matemática Simbólica (SymPy y Nativa)</h2>
     <p>
-      Con el extra <code>[symbolic]</code>, MeasureKit se integra con SymPy para proporcionar matemática simbólica adaptada a unidades, derivadas, integración y resolución de ecuaciones:
+      MeasureKit ofrece dos entornos distintos de matemática simbólica: un envoltorio basado en SymPy para resolver ecuaciones algebraicas y un **Motor Simbólico Nativo** en Rust (con fallback en Python) diseñado para simplificación algebraica de alto rendimiento y derivadas analíticas exactas sin dependencias externas.
+    </p>
+
+    <h3>A. Resolución de Ecuaciones basada en SymPy</h3>
+    <p>
+      Requiere <code>pip install "measurekit[symbolic]"</code>. Este framework se integra con SymPy para resolver ecuaciones físicas y conservar automáticamente las unidades:
     </p>
     <pre><code>from measurekit.domain.symbolic.quantity import SymbolicQuantity, Equation
 
@@ -359,6 +368,27 @@ print(v_expr)             # Expression(x/t) [m/s]
 # Evaluar la expresión con valores concretos
 res = t_solved.evaluate(x=Q_(100, "m"), v=Q_(5, "m/s"))
 print(res)                # 20.0 s</code></pre>
+
+    <h3>B. Motor Simbólico Nativo (Sin Dependencias)</h3>
+    <p>
+      Disponible bajo <code>measurekit.domain.symbolic.native</code>. Este motor está implementado directamente en Rust (vía PyO3, con un fallback puro en Python). Simplifica términos aplicando reglas algebraicas (identidad, inversos, plegado de constantes, recolección de términos) y calcula derivadas exactas:
+    </p>
+    <pre><code>from measurekit.domain.symbolic.native import Expr
+from measurekit.domain.measurement.units import CompoundUnit
+
+# Definir nodos simbólicos y de cantidad
+x = Expr.symbol("x")
+k = Expr.Quantity("k", CompoundUnit("N/m"))
+const_val = Expr.number(2.0)
+
+# Construir una expresión: 2.0 * x - x
+expr = const_val * x - x
+print(expr.simplify())  # 1.0 * x (simplificado algebraicamente)
+
+# Calcular derivadas analíticas
+poly_expr = x ** Expr.number(3.0)
+deriv = poly_expr.diff("x")
+print(deriv.simplify())  # 3.0 * x^2.0</code></pre>
   </section>
 
   <!-- 11. Pandas Extensions & Accessors -->
@@ -424,7 +454,7 @@ print(q)  # [10 20] m/s</code></pre>
 
     <h3>C. Serialización del Estado de la Aplicación</h3>
     <p>
-      Serializar cantidades directamente con pickle puede hacer que se pierdan las correlaciones rastreadas en la matriz de covarianza. Usa <code>save_state</code> y <code>load_state</code> para guardar y restaurar el <code>CovarianceStore</code> activo:
+      Serializar cantidades directamente con pickle puede hacer que se pierdan las correlaciones rastreadas en la matriz de covarianza. Usa <code>save_state</code> and <code>load_state</code> para guardar y restaurar el <code>CovarianceStore</code> activo:
     </p>
     <pre><code>from measurekit import save_state, load_state
 
@@ -433,6 +463,154 @@ save_state("app_state.pkl")
 
 # Restaura el almacén al contexto activo
 load_state("app_state.pkl")</code></pre>
+  </section>
+
+  <!-- 13. Química y Seguimiento de Reacciones -->
+  <section class="guide-section">
+    <h2 id="chemistry">13. Química y Seguimiento de Reacciones</h2>
+    <p>
+      MeasureKit incluye una extensión de química bajo el módulo <code>measurekit.ext.chemistry</code>. Permite mapear masa a moles y balancear ecuaciones químicas usando equivalencias dinámicas de masa molar, sin afectar los flujos de alta velocidad de los tensores base.
+    </p>
+
+    <h3>A. Conversión de Unidades por Especie</h3>
+    <p>
+      Dado que la masa (gramos) y la cantidad de sustancia (moles) poseen dimensiones físicas base distintas, la conversión directa entre ellas no es válida de forma general en física. Mediante la masa molar de una sustancia química (<code>Species</code>), MeasureKit habilita esta conversión:
+    </p>
+    <pre><code>from measurekit import Q_, equivalencies
+from measurekit.ext.chemistry import Species, molar_equivalency
+
+# Definir una especie (se calcula su masa molar e incertidumbre estándar)
+agua = Species("H2O")
+print(agua.molar_mass)  # 18.01528 +/- 0.0005 g/mol
+
+masa = Q_(18.015, "g")
+
+# Utilizar el gestor de contexto de equivalencia molar para convertir
+with equivalencies(molar_equivalency(agua)):
+    moles = masa.to("mol")
+    print(moles)         # 1.0 mol</code></pre>
+
+    <h3>B. Estequiometría y Balanceo de Reacciones</h3>
+    <p>
+      Es posible definir reacciones a partir de una ecuación química sencilla en texto. MeasureKit determina los coeficientes estequiométricos de equilibrio, identifica el reactivo limitante y propaga la incertidumbre del peso a los productos:
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import Reaction
+
+# Analizar y balancear automáticamente la reacción
+rxn = Reaction.from_string("H2 + O2 -> H2O")
+print(rxn.reactant_coeffs)  # [2, 1] (ecuación: 2 H2 + O2 -> 2 H2O)
+
+# Calcular rendimiento teórico dados pesos iniciales con incertidumbre
+result = rxn.calculate(
+    H2=Q_(10.0, "g", uncertainty=0.1),
+    O2=Q_(50.0, "g", uncertainty=0.2)
+)
+
+print("Reactivo limitante:", result.limiting_reactant)  # O2
+print("Rendimiento de H2O:", result.yields["H2O"].to("g"))      # 56.31 +/- 0.22 g</code></pre>
+
+    <h3>C. Funciones de Físico-Química</h3>
+    <p>
+      Se incorporan utilidades para consulta de entropías/entalpías de formación, cinética de Arrhenius y energía libre de Gibbs, garantizando la consistencia dimensional en cada paso:
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import arrhenius, gibbs_free_energy, standard_enthalpy, standard_entropy
+
+# Constante de velocidad por Arrhenius
+A = Q_(1e13, "s^-1")
+Ea = Q_(75.0, "kJ/mol")
+T = Q_(298.15, "K")
+k = arrhenius(A, Ea, T)
+print(k)  # ~0.72 s^-1
+
+# Cálculo de Energía Libre de Gibbs
+dH = standard_enthalpy("H2O")       # Consulta del valor integrado
+dS = Q_(-163.2, "J/(mol*K)")
+dG = gibbs_free_energy(dH, T, dS)
+print(dG.to("kJ/mol"))              # -237.1 kJ/mol</code></pre>
+  </section>
+
+  <!-- 14. Compilador AOT de Física -->
+  <section class="guide-section">
+    <h2 id="compiler">14. Compilador AOT de Física</h2>
+    <p>
+      Si tu aplicación realiza cálculos en bucles de alto rendimiento donde la asignación de objetos <code>Quantity</code> resulta lenta, puedes compilar tus ecuaciones mediante <code>compile_physics_model</code> en <code>measurekit.ext.compiler</code>.
+    </p>
+    <p>
+      Este módulo traza la función Python una única vez sobre marcadores de unidades para validar estáticamente la consistencia dimensional y genera un kernel puro en punto flotante sin unidades usando <code>exec()</code> que corre a máxima velocidad.
+    </p>
+    <pre><code>from measurekit.ext.compiler import compile_physics_model
+
+def fuerza_arrastre(densidad, velocidad, area, coeficiente):
+    return 0.5 * densidad * (velocidad**2) * area * coeficiente
+
+# Compilar a una función numérica sin unidades
+fast_drag = compile_physics_model(
+    fuerza_arrastre,
+    input_units=&#123;
+        "densidad": "kg/m^3",
+        "velocidad": "m/s",
+        "area": "m^2",
+        "coeficiente": ""
+    &#125;,
+    output_unit="N"
+)
+
+# Las llamadas siguientes operan sobre floats puros sin overhead de validación
+fuerza = fast_drag(1.225, 10.0, 2.5, 0.3)
+print(fuerza)  # 45.9375 (float neto validado estáticamente)</code></pre>
+  </section>
+
+  <!-- 15. Regresión Simbólica Dimensional -->
+  <section class="guide-section">
+    <h2 id="regression">15. Regresión Simbólica Dimensional</h2>
+    <p>
+      Al ajustar fórmulas a datos empíricos, los regresores simbólicos estándar suelen proponer combinaciones físicamente incorrectas. El regresor <code>SymbolicRegressor</code> de <code>measurekit.ext.symbolic_regression</code> utiliza programación genética sobre árboles de expresión coherentes por definición.
+    </p>
+    <p>
+      Cada mutación o cruce se valida dimensionalmente al instante. El regresor resuelve estructuralmente la constante de escala principal <code>k</code> y deriva su unidad de forma automática como <code>target.unit / candidate.unit</code>.
+    </p>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.symbolic_regression import SymbolicRegressor
+
+# Datos experimentales con unidades
+t = Q_([1.0, 2.0, 3.0, 4.0, 5.0], "s", symbol="t")
+s = Q_([4.9, 19.5, 44.0, 78.3, 122.1], "m", symbol="s")
+
+regressor = SymbolicRegressor(
+    inputs=&#123;"t": t&#125;,
+    target=s,
+    allowed_operations=["Add", "Mul", "Pow"],
+    max_complexity=10,
+    seed=0
+)
+best_fit = regressor.fit()
+
+print(best_fit.formula_string)  # s = k * t^2.0
+print(best_fit.constants["k"])  # 4.887 m/s²</code></pre>
+  </section>
+
+  <!-- 16. Gráficos con Soporte de Unidades -->
+  <section class="guide-section">
+    <h2 id="plotting">16. Gráficos con Soporte de Unidades</h2>
+    <p>
+      MeasureKit se integra directamente con flujos de visualización mediante el módulo <code>measurekit.plotting</code> y métodos en la clase <code>Quantity</code>. Formatea etiquetas de ejes con sus respectivas unidades y dibuja barras de error a partir de la incertidumbre.
+    </p>
+    <pre><code>import numpy as np
+from measurekit import Q_
+
+# Crear cantidades
+x = Q_(np.linspace(0, 10, 100), "m")
+y = Q_(np.sin(x.magnitude), "m/s", uncertainty=0.05)
+
+# Graficar directamente (requiere matplotlib)
+# Nombra los ejes automáticamente: "X label (m)" e "Y label (m/s)"
+# Muestra barras de error o intervalos sombreados a 1σ
+y.plot(x=x, kind="line")
+
+# Graficar la matriz de covarianza
+y.plot_covariance()</code></pre>
   </section>
 
   <div class="next-section">

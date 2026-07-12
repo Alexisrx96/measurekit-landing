@@ -1,0 +1,183 @@
+---
+import DocsLayout from "../../layouts/DocsLayout.astro";
+---
+
+<DocsLayout title="Extensión VS Code" description="Instalación y configuración del soporte para MeasureKit Meta-Lang (MKML) en VS Code" activeSection="vscode">
+  <div class="page-header">
+    <div class="kicker">Extensiones</div>
+    <h1>Extensión VS Code</h1>
+    <p>Obtén soporte nativo para la sintaxis de <strong>MeasureKit Meta-Lang (MKML)</strong> en Visual Studio Code, Cursor y VSCodium.</p>
+  </div>
+
+  <div class="callout callout-info" style="display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; padding: 1.25rem; border-left: 4px solid var(--accent); border-radius: var(--radius-sm);">
+    <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Paquete de Instalación Manual:</strong></p>
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <a href="/vsc-measurekit-0.1.0.vsix" download class="btn-primary" style="margin: 0;">Descargar vsc-measurekit-0.1.0.vsix</a>
+      <span style="color: var(--text-muted); font-size: 0.9rem;">(Compatible con VS Code 1.93.0+)</span>
+    </div>
+  </div>
+
+  <h2>Características Clave ✨</h2>
+  <div class="features-grid">
+    <div class="card">
+      <h3>🎨 Resaltado Semántico</h3>
+      <p>Coloreado de sintaxis robusto para variables, unidades físicas, exponentes, incertidumbres (<code>+/-</code> o <code>±</code>), operadores de conversión (<code>=&gt;</code>) y aserciones (<code>==</code>).</p>
+    </div>
+    <div class="card">
+      <h3>⚡ Ejecución Rápida</h3>
+      <p>Ejecuta instantáneamente el archivo <code>.mkml</code> activo utilizando el entorno virtual e intérprete de Python configurado con un solo atajo de teclado.</p>
+    </div>
+    <div class="card">
+      <h3>💬 REPL Interactivo</h3>
+      <p>Inicia una sesión REPL interactiva directamente en la terminal integrada del editor y envía la línea actual o la selección de código al REPL.</p>
+    </div>
+    <div class="card">
+      <h3>🔍 Autocompletado de Unidades</h3>
+      <p>Sugerencias inteligentes de autocompletado consultando en tiempo real las unidades físicas de tu instalación local de <code>measurekit</code>.</p>
+    </div>
+    <div class="card">
+      <h3>ℹ️ Información de Hover y Outline</h3>
+      <p>Coloca el cursor sobre una unidad para ver sus dimensiones base y descripción, o navega rápidamente por las asignaciones de variables mediante la vista Outline del editor.</p>
+    </div>
+    <div class="card">
+      <h3>🛠️ Diagnósticos en Tiempo Real</h3>
+      <p>Indicación visual instantánea de paréntesis no balanceados y caracteres desconocidos o no válidos mientras escribes.</p>
+    </div>
+  </div>
+
+  <h2>Métodos de Instalación</h2>
+
+  <h3>1. Instalación Manual por VSIX (Recomendado)</h3>
+  <ol>
+    <li>Descarga el archivo del paquete <a href="/vsc-measurekit-0.1.0.vsix" download>vsc-measurekit-0.1.0.vsix</a>.</li>
+    <li>En VS Code o Cursor, abre la paleta de comandos (<code>Ctrl+Shift+P</code> o <code>Cmd+Shift+P</code>).</li>
+    <li>Selecciona la opción <strong>Extensions: Install from VSIX...</strong> (Extensiones: Instalar desde VSIX...).</li>
+    <li>Navega hasta el archivo <code>.vsix</code> descargado y selecciónalo.</li>
+    <li>Reinicia o recarga la ventana del editor si se solicita.</li>
+  </ol>
+
+  <h3>2. Enlace Simbólico de Desarrollo (Instalación Local)</h3>
+  <p>Si has clonado el repositorio de la extensión, puedes enlazarlo directamente con la carpeta de extensiones de tu editor:</p>
+  
+  <div class="tabs">
+    <div class="tab-list">
+      <button class="tab-btn active" data-tab="sym-vscode">VS Code / Cursor</button>
+      <button class="tab-btn" data-tab="sym-codium">VSCodium</button>
+    </div>
+    <div class="tab-panel active" id="sym-vscode">
+      <pre><code># Linux / macOS
+ln -s "/ruta/a/vsc_measurekit" ~/.vscode/extensions/vsc-measurekit</code></pre>
+    </div>
+    <div class="tab-panel" id="sym-codium">
+      <pre><code># Linux / macOS
+ln -s "/ruta/a/vsc_measurekit" ~/.vscode-oss/extensions/vsc-measurekit</code></pre>
+    </div>
+  </div>
+
+  <h2>Atajos de Teclado ⌨️</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Acción</th>
+        <th>Linux / Windows</th>
+        <th>macOS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Ejecutar archivo MKML actual</strong></td>
+        <td><code>Ctrl + Alt + N</code></td>
+        <td><code>Cmd + Alt + N</code></td>
+      </tr>
+      <tr>
+        <td><strong>Enviar selección/línea al REPL</strong></td>
+        <td><code>Shift + Enter</code></td>
+        <td><code>Shift + Enter</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Configuración ⚙️</h2>
+  <p>La extensión requiere el intérprete de Python donde se encuentra instalada la librería <code>measurekit</code> para resolver el autocompletado y ejecutar los archivos. Por defecto, busca hacia arriba partiendo del archivo abierto buscando la carpeta del entorno virtual (<code>.venv</code>).</p>
+  
+  <p>Puedes personalizar la ruta del ejecutable de Python en la configuración de la interfaz gráfica:</p>
+  <ol>
+    <li>Abre la configuración del editor (<code>Ctrl+,</code> o <code>Cmd+,</code>).</li>
+    <li>Busca <strong>MeasureKit</strong>.</li>
+    <li>Edita la opción <strong>Python Path</strong>.</li>
+  </ol>
+  
+  <p>O añádela directamente al archivo <code>.vscode/settings.json</code> del proyecto:</p>
+  <pre><code>&#123;
+  "vsc-measurekit.pythonPath": "/ruta/a/tu/proyecto/.venv/bin/python"
+&#125;</code></pre>
+
+  <div class="next-section">
+    <a href="/es/changelog" class="btn-primary">Siguiente: Historial →</a>
+  </div>
+</DocsLayout>
+
+<style>
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+  }
+  .card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  .card p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    padding: 0.6rem 1.4rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    display: inline-block;
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+    text-decoration: none;
+  }
+  .next-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.tab-list').forEach(tabList => {
+    const tabs = tabList.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.getAttribute('data-tab');
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const container = tabList.closest('.tabs');
+        container?.querySelectorAll('.tab-panel').forEach(panel => {
+          panel.classList.toggle('active', panel.id === targetId);
+        });
+      });
+    });
+  });
+</script>

@@ -26,6 +26,11 @@ import DocsLayout from "../layouts/DocsLayout.astro";
       <div class="release-body">
         <h3>What's new</h3>
         <ul>
+          <li>Chemistry extension added under <code>measurekit.ext.chemistry</code>: Species formula parsing, automatic stoichiometric reaction balancing, theoretical yields, kinetics, and thermodynamic free energy checks</li>
+          <li>Native Symbolic Engine (<code>measurekit.domain.symbolic.native.Expr</code>): Zero-dependency algebraic simplification (<code>.simplify()</code>) and analytical differentiation (<code>.diff()</code>) with Rust core backend and pure-Python fallback</li>
+          <li>Ahead-of-Time Physics Compiler (<code>measurekit.ext.compiler</code>): <code>compile_physics_model</code> traces and verifies formulas, baking them into high-speed unitless raw-float kernels</li>
+          <li>Symbolic Regression (<code>measurekit.ext.symbolic_regression</code>): <code>SymbolicRegressor</code> fits physically valid formulas to empirical data using genetic programming</li>
+          <li>Unit-Aware Plotting (<code>measurekit.plotting</code>): <code>plot()</code>, <code>plot_slices()</code>, and <code>plot_covariance()</code> with automatic axis labels, error bars, and covariance visualization</li>
           <li>Python 3.13 and 3.14 support added to CI matrix</li>
           <li>Improved startup performance — import budget tracked in CI</li>
           <li>GrammarInterpreter: added <code>= ?</code> query syntax for variable inspection</li>
@@ -72,7 +77,7 @@ import DocsLayout from "../layouts/DocsLayout.astro";
           <li>PyTorch backend: <code>__torch_dispatch__</code> integration for JIT compilation</li>
           <li>Unit checks at trace time → compiled graph sees only raw tensors (&lt;1.1× overhead)</li>
           <li>NumPy backend with Numba JIT support</li>
-          <li>MeasureNote grammar interpreter (<code>measurekit.ext.grammar</code>)</li>
+          <li>MeasureKit grammar interpreter (<code>measurekit.ext.grammar</code>)</li>
           <li>REPL and CLI entry point (<code>python -m measurekit</code>)</li>
           <li>SymPy integration for symbolic differentiation</li>
         </ul>

@@ -306,6 +306,97 @@ KE = compiled_ke(m, v)
 print(KE)           # 3500.0 J
 print(KE.to("kJ"))  # 3.5 kJ</code></pre>
   </section>
+
+  <!-- Section: Chemistry -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🧪</span>
+      <div style="flex: 1;">
+        <h2 id="chemistry">Química y Rendimiento Estequiométrico</h2>
+        <p>Definición de especies químicas, balanceo de reacciones y cálculo de rendimiento con incertidumbre.</p>
+      </div>
+      <a href="/es/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Probar en Playground 🚀</a></div>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import Reaction, Species
+
+# 1. Definir especies
+agua = Species("H2O")
+print(f"Masa molar de H2O: &#123;agua.molar_mass&#125;")
+
+# 2. Balancear reacción automáticamente
+rxn = Reaction.from_string("H2 + O2 -> H2O")
+print(f"Coeficientes de reactivos: &#123;rxn.reactant_coeffs&#125;") # [2, 1]
+
+# 3. Calcular rendimientos e identificar reactivo limitante
+result = rxn.calculate(
+    H2=Q_(10.0, "g", uncertainty=0.1),
+    O2=Q_(50.0, "g", uncertainty=0.2),
+)
+print(f"Reactivo limitante: &#123;result.limiting_reactant&#125;")  # O2
+print(f"Rendimiento de H2O: &#123;result.yields['H2O'].to('g'):.2f&#125;")  # ~56.31 g</code></pre>
+  </section>
+
+  <!-- Section: AOT Compiler -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">⚙️</span>
+      <div style="flex: 1;">
+        <h2 id="compiler">Compilador AOT de Física</h2>
+        <p>Compila una fórmula física a una función numérica sin dependencias ni validaciones en ejecución.</p>
+      </div>
+      <a href="/es/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Probar en Playground 🚀</a></div>
+    <pre><code>from measurekit.ext.compiler import compile_physics_model
+
+# Definir una función estándar
+def fuerza_arrastre(densidad, velocidad, area, coeficiente):
+    return 0.5 * densidad * (velocidad**2) * area * coeficiente
+
+# Compilar (valida dimensiones estáticamente, genera ejecutable numérico)
+fast_drag = compile_physics_model(
+    fuerza_arrastre,
+    input_units=&#123;
+        "densidad": "kg/m^3",
+        "velocidad": "m/s",
+        "area": "m^2",
+        "coeficiente": "",
+    &#125;,
+    output_unit="N",
+)
+
+# Ejecutar a máxima velocidad con floats puros
+res = fast_drag(1.225, 10.0, 2.5, 0.3)
+print(f"Fuerza: &#123;res:.4f&#125; (float sin unidad)")  # 45.9375</code></pre>
+  </section>
+
+  <!-- Section: Symbolic Regression -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🧮</span>
+      <div style="flex: 1;">
+        <h2 id="regression">Regresión Simbólica</h2>
+        <p>Ajuste de fórmulas dimensionalmente válidas a conjuntos de datos físicos experimentales.</p>
+      </div>
+      <a href="/es/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Probar en Playground 🚀</a></div>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.symbolic_regression import SymbolicRegressor
+
+# Definir datos del dataset
+t = Q_([1.0, 2.0, 3.0, 4.0, 5.0], "s", symbol="t")
+s = Q_([4.9, 19.5, 44.0, 78.3, 122.1], "m", symbol="s")
+
+# Instanciar y ajustar regresor
+regressor = SymbolicRegressor(
+    inputs=&#123;"t": t&#125;,
+    target=s,
+    allowed_operations=["Add", "Mul", "Pow"],
+    max_complexity=10,
+    seed=0,
+)
+best_fit = regressor.fit()
+
+print(f"Mejor fórmula: &#123;best_fit.formula_string&#125;")  # s = k * t^2.0
+print(f"Constante 'k' derivada: &#123;best_fit.constants['k']&#125;")  # ~4.887 m/s^2</code></pre>
+  </section>
 </DocsLayout>
 
 <style>

@@ -175,7 +175,7 @@ print(mn.eval("I == 0.24 A"))  # True
 print(mn.eval("P == 5.76 W"))  # True
 
 # Run physics notes from a file:
-# mn.run(open("notes.mnml").read())</code></pre>
+# mn.run(open("notes.mkml").read())</code></pre>
   </section>
 
   <!-- Section: NumPy tensors -->
@@ -313,6 +313,97 @@ print(KE.to("kJ"))  # 3.5 kJ
 # Incorrect units → caught at trace time (not runtime):
 # t = Q_(torch.tensor(2.0), "s")
 # compiled_ke(m, t)  # ❌ DimensionError at compile time</code></pre>
+  </section>
+
+  <!-- Section: Chemistry -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🧪</span>
+      <div style="flex: 1;">
+        <h2 id="chemistry">Chemistry & Stoichiometric Yield</h2>
+        <p>Define substances, balance equations, and compute yields with uncertainty.</p>
+      </div>
+      <a href="/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Run in Playground 🚀</a></div>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.chemistry import Reaction, Species
+
+# 1. Define species
+water = Species("H2O")
+print(f"Molar mass of H2O: &#123;water.molar_mass&#125;")
+
+# 2. Balance reaction automatically
+rxn = Reaction.from_string("H2 + O2 -> H2O")
+print(f"Reactant coefficients: &#123;rxn.reactant_coeffs&#125;") # [2, 1]
+
+# 3. Calculate yields and identify limiting reactant
+result = rxn.calculate(
+    H2=Q_(10.0, "g", uncertainty=0.1),
+    O2=Q_(50.0, "g", uncertainty=0.2),
+)
+print(f"Limiting reactant: &#123;result.limiting_reactant&#125;")  # O2
+print(f"H2O Yield: &#123;result.yields['H2O'].to('g'):.2f&#125;")  # ~56.31 g</code></pre>
+  </section>
+
+  <!-- Section: AOT Compiler -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">⚙️</span>
+      <div style="flex: 1;">
+        <h2 id="compiler">AOT Physics Compilation</h2>
+        <p>Compile a physics formula into a raw float kernel with zero per-call overhead.</p>
+      </div>
+      <a href="/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Run in Playground 🚀</a></div>
+    <pre><code>from measurekit.ext.compiler import compile_physics_model
+
+# Define standard Python function
+def drag_force(density, velocity, area, drag_coeff):
+    return 0.5 * density * (velocity**2) * area * drag_coeff
+
+# Compile (statically verifies dimensions, generates float-only executable)
+fast_drag = compile_physics_model(
+    drag_force,
+    input_units=&#123;
+        "density": "kg/m^3",
+        "velocity": "m/s",
+        "area": "m^2",
+        "drag_coeff": "",
+    &#125;,
+    output_unit="N",
+)
+
+# Run raw float math at maximum speed
+res = fast_drag(1.225, 10.0, 2.5, 0.3)
+print(f"Force: &#123;res:.4f&#125; (unitless float)")  # 45.9375</code></pre>
+  </section>
+
+  <!-- Section: Symbolic Regression -->
+  <section class="example-section">
+    <div class="example-header">
+      <span class="example-icon">🧮</span>
+      <div style="flex: 1;">
+        <h2 id="regression">Symbolic Regression</h2>
+        <p>Fit dimensionally consistent formulas to experimental physics datasets.</p>
+      </div>
+      <a href="/playground" class="btn-secondary run-in-playground" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 6px; flex-shrink: 0; align-self: center; text-decoration: none;">Run in Playground 🚀</a></div>
+    <pre><code>from measurekit import Q_
+from measurekit.ext.symbolic_regression import SymbolicRegressor
+
+# Define dataset variables
+t = Q_([1.0, 2.0, 3.0, 4.0, 5.0], "s", symbol="t")
+s = Q_([4.9, 19.5, 44.0, 78.3, 122.1], "m", symbol="s")
+
+# Instantiate and fit symbolic regressor
+regressor = SymbolicRegressor(
+    inputs=&#123;"t": t&#125;,
+    target=s,
+    allowed_operations=["Add", "Mul", "Pow"],
+    max_complexity=10,
+    seed=0,
+)
+best_fit = regressor.fit()
+
+print(f"Best Formula: &#123;best_fit.formula_string&#125;")  # s = k * t^2.0
+print(f"Derived Constant 'k': &#123;best_fit.constants['k']&#125;")  # ~4.887 m/s^2</code></pre>
   </section>
 </DocsLayout>
 

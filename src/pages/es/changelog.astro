@@ -26,6 +26,11 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
       <div class="release-body">
         <h3>Novedades</h3>
         <ul>
+          <li>Extensión de Química añadida bajo <code>measurekit.ext.chemistry</code>: Procesamiento de fórmulas de especies químicas, balanceo estequiométrico automático de reacciones, rendimientos teóricos, cinética y análisis termodinámico de energía libre de Gibbs</li>
+          <li>Motor Simbólico Nativo (<code>measurekit.domain.symbolic.native.Expr</code>): Simplificación algebraica (<code>.simplify()</code>) y derivación analítica (<code>.diff()</code>) sin dependencias externas, con núcleo optimizado en Rust y fallback puro en Python</li>
+          <li>Compilador AOT de Física (<code>measurekit.ext.compiler</code>): <code>compile_physics_model</code> rastrea y valida ecuaciones para compilarlas en kernels ultra rápidos sin overhead de unidades</li>
+          <li>Regresión Simbólica Dimensional (<code>measurekit.ext.symbolic_regression</code>): <code>SymbolicRegressor</code> utiliza programación genética para ajustar fórmulas físicamente válidas sobre datos empíricos</li>
+          <li>Gráficos con Soporte de Unidades (<code>measurekit.plotting</code>): <code>plot()</code>, <code>plot_slices()</code> y <code>plot_covariance()</code> con etiquetado automático de ejes, barras de error e incertidumbre, y visualización de matrices de covarianza</li>
           <li>Soporte para Python 3.13 y 3.14 añadido a la matriz de CI</li>
           <li>Optimización de velocidad de arranque — presupuesto de importaciones controlado en CI</li>
           <li>GrammarInterpreter: se añadió la sintaxis de consulta <code>= ?</code> para inspección de variables</li>
@@ -72,7 +77,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
           <li>Backend de PyTorch: integración de <code>__torch_dispatch__</code> para compilación JIT</li>
           <li>Comprobaciones de unidades al trazar el grafo &rarr; el grafo compilado opera sobre tensores puros (&lt;1.1× de overhead)</li>
           <li>Backend de NumPy con soporte para compilación JIT de Numba</li>
-          <li>Intérprete sintáctico MeasureNote (<code>measurekit.ext.grammar</code>)</li>
+          <li>Intérprete sintáctico MeasureKit (<code>measurekit.ext.grammar</code>)</li>
           <li>Sesión interactiva REPL y CLI (<code>python -m measurekit</code>)</li>
           <li>Integración con SymPy para derivación simbólica</li>
         </ul>
