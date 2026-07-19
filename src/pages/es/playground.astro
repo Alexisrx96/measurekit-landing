@@ -32,7 +32,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
           <button class="snippet-btn" data-snippet="basic">Aritmética Básica</button>
           <button class="snippet-btn" data-snippet="uncertainty">Incertidumbre</button>
           <button class="snippet-btn" data-snippet="numpy">Matriz NumPy</button>
-          <button class="snippet-btn" data-snippet="grammar">physure (MKML)</button>
+          <button class="snippet-btn" data-snippet="grammar">physure (PHS)</button>
           <button class="snippet-btn" data-snippet="visualizer" style="border-color: var(--accent); color: var(--accent2); font-weight: 600;">📊 Graficador N-D</button>
         </div>
       </div>
@@ -205,7 +205,7 @@ print(velocidad.to("km/hr"))
 `,
       grammar: `from physure.ext.grammar import GrammarInterpreter
 
-# Usando notación física natural con physure (MKML)
+# Usando notación física natural con physure (PHS)
 interpreter = GrammarInterpreter()
 interpreter.run("""
 g = 9.81 +/- 0.02 m/s^2

@@ -2,17 +2,17 @@
 import DocsLayout from "../../layouts/DocsLayout.astro";
 ---
 
-<DocsLayout title="Extensión VS Code" description="Instalación y configuración del soporte para physure Meta-Lang (MKML) en VS Code" activeSection="vscode">
+<DocsLayout title="Extensión VS Code" description="Instalación y configuración del soporte para physure Meta-Lang (PHS) en VS Code" activeSection="vscode">
   <div class="page-header">
     <div class="kicker">Extensiones</div>
     <h1>Extensión VS Code</h1>
-    <p>Obtén soporte nativo para la sintaxis de <strong>physure Meta-Lang (MKML)</strong> en Visual Studio Code, Cursor y VSCodium.</p>
+    <p>Obtén soporte nativo para la sintaxis de <strong>physure Meta-Lang (PHS)</strong> en Visual Studio Code, Cursor y VSCodium.</p>
   </div>
 
   <div class="callout callout-info" style="display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; padding: 1.25rem; border-left: 4px solid var(--accent); border-radius: var(--radius-sm);">
     <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Paquete de Instalación Manual:</strong></p>
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <a href="/vsc-measurekit-0.1.0.vsix" download class="btn-primary" style="margin: 0;">Descargar vsc-measurekit-0.1.0.vsix</a>
+      <a href="/vsc-physure-0.2.0.vsix" download class="btn-primary" style="margin: 0;">Descargar vsc-physure-0.2.0.vsix</a>
       <span style="color: var(--text-muted); font-size: 0.9rem;">(Compatible con VS Code 1.93.0+)</span>
     </div>
   </div>
@@ -25,7 +25,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     </div>
     <div class="card">
       <h3>⚡ Ejecución Rápida</h3>
-      <p>Ejecuta instantáneamente el archivo <code>.mkml</code> activo utilizando el entorno virtual e intérprete de Python configurado con un solo atajo de teclado.</p>
+      <p>Ejecuta instantáneamente el archivo <code>.phs</code> activo utilizando el entorno virtual e intérprete de Python configurado con un solo atajo de teclado.</p>
     </div>
     <div class="card">
       <h3>💬 REPL Interactivo</h3>
@@ -49,7 +49,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
 
   <h3>1. Instalación Manual por VSIX (Recomendado)</h3>
   <ol>
-    <li>Descarga el archivo del paquete <a href="/vsc-measurekit-0.1.0.vsix" download>vsc-measurekit-0.1.0.vsix</a>.</li>
+    <li>Descarga el archivo del paquete <a href="/vsc-physure-0.2.0.vsix" download>vsc-physure-0.2.0.vsix</a>.</li>
     <li>En VS Code o Cursor, abre la paleta de comandos (<code>Ctrl+Shift+P</code> o <code>Cmd+Shift+P</code>).</li>
     <li>Selecciona la opción <strong>Extensions: Install from VSIX...</strong> (Extensiones: Instalar desde VSIX...).</li>
     <li>Navega hasta el archivo <code>.vsix</code> descargado y selecciónalo.</li>
@@ -66,11 +66,11 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     </div>
     <div class="tab-panel active" id="sym-vscode">
       <pre><code># Linux / macOS
-ln -s "/ruta/a/vsc_physure" ~/.vscode/extensions/vsc-measurekit</code></pre>
+ln -s "/ruta/a/vsc_physure" ~/.vscode/extensions/vsc-physure</code></pre>
     </div>
     <div class="tab-panel" id="sym-codium">
       <pre><code># Linux / macOS
-ln -s "/ruta/a/vsc_physure" ~/.vscode-oss/extensions/vsc-measurekit</code></pre>
+ln -s "/ruta/a/vsc_physure" ~/.vscode-oss/extensions/vsc-physure</code></pre>
     </div>
   </div>
 
@@ -85,7 +85,7 @@ ln -s "/ruta/a/vsc_physure" ~/.vscode-oss/extensions/vsc-measurekit</code></pre>
     </thead>
     <tbody>
       <tr>
-        <td><strong>Ejecutar archivo MKML actual</strong></td>
+        <td><strong>Ejecutar archivo PHS actual</strong></td>
         <td><code>Ctrl + Alt + N</code></td>
         <td><code>Cmd + Alt + N</code></td>
       </tr>
@@ -109,7 +109,7 @@ ln -s "/ruta/a/vsc_physure" ~/.vscode-oss/extensions/vsc-measurekit</code></pre>
   
   <p>O añádela directamente al archivo <code>.vscode/settings.json</code> del proyecto:</p>
   <pre><code>&#123;
-  "vsc-measurekit.pythonPath": "/ruta/a/tu/proyecto/.venv/bin/python"
+  "vsc-physure.pythonPath": "/ruta/a/tu/proyecto/.venv/bin/python"
 &#125;</code></pre>
 
   <div class="next-section">

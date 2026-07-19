@@ -22,7 +22,7 @@ import DocsLayout from "../layouts/DocsLayout.astro";
       <div class="mode-num">2</div>
       <h3>File evaluation</h3>
       <p>Pipe a file of physure statements. All results are printed in order.</p>
-      <pre><code>python -m physure &lt; notes.mkml</code></pre>
+      <pre><code>python -m physure &lt; notes.phs</code></pre>
     </div>
     <div class="mode-card">
       <div class="mode-num">3</div>
@@ -86,7 +86,7 @@ physure repl "500 N / 2 m^2 => kPa"  # evaluate single expression
 physure sync-types                    # regenerate unit type stubs</code></pre>
 
   <h2>physure syntax reference</h2>
-  <p>The REPL uses physure (MKML) syntax. Here's a complete reference:</p>
+  <p>The REPL uses physure (PHS) syntax. Here's a complete reference:</p>
   <table>
     <thead>
       <tr><th>Syntax</th><th>Example</th><th>Description</th></tr>
@@ -136,8 +136,8 @@ physure sync-types                    # regenerate unit type stubs</code></pre>
   </table>
 
   <h2>Writing script files</h2>
-  <p>Create <code>.mkml</code> files with physics notation and pipe them to physure:</p>
-  <pre><code># notes.mkml — circuit analysis
+  <p>Create <code>.phs</code> files with physics notation and pipe them to physure:</p>
+  <pre><code># notes.phs — circuit analysis
 V  = 24 V
 R1 = 100 Ω
 R2 = 150 Ω
@@ -153,7 +153,7 @@ P = V * I
 
 I => mA
 P => W</code></pre>
-  <pre><code>python -m physure &lt; notes.mkml
+  <pre><code>python -m physure &lt; notes.phs
 # 96.0 mA
 # 2.304 W</code></pre>
 
