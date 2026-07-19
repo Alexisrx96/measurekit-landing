@@ -317,8 +317,8 @@ print("Fuerza convertida a kN:", interpreter.eval("fuerza => kN"))
           mode: 'lines+markers',
           type: 'scatter',
           name: currentPlotData.title || 'Data',
-          line: { color: '#818cf8', width: 2 },
-          marker: { color: '#6366f1', size: 6 }
+          line: { color: '#fbbf24', width: 2 },
+          marker: { color: '#f59e0b', size: 6 }
         };
         
         // Handle Uncertainty error bars
@@ -387,9 +387,9 @@ print("Fuerza convertida a kN:", interpreter.eval("fuerza => kN"))
           z: zData,
           mode: 'markers+lines',
           type: 'scatter3d',
-          line: { color: '#818cf8', width: 2 },
+          line: { color: '#fbbf24', width: 2 },
           marker: {
-            color: '#6366f1',
+            color: '#f59e0b',
             size: 4,
             opacity: 0.8
           }
@@ -449,7 +449,7 @@ print("Fuerza convertida a kN:", interpreter.eval("fuerza => kN"))
         const trace = {
           type: 'parcoords',
           line: {
-            color: '#818cf8',
+            color: '#fbbf24',
             colorscale: 'Jet'
           },
           dimensions: dimensions
@@ -478,9 +478,9 @@ print("Fuerza convertida a kN:", interpreter.eval("fuerza => kN"))
           type: 'splom',
           dimensions: dimensions,
           marker: {
-            color: '#818cf8',
+            color: '#fbbf24',
             size: 5,
-            line: { color: '#6366f1', width: 0.5 },
+            line: { color: '#f59e0b', width: 0.5 },
             opacity: 0.7
           }
         };
@@ -926,7 +926,7 @@ sys.stderr = io.StringIO()
   }
   .run-btn {
     background: var(--accent);
-    color: white;
+    color: #18181a;
     border: none;
     font-weight: 600;
     font-size: 0.875rem;
@@ -1066,7 +1066,7 @@ sys.stderr = io.StringIO()
   }
   .badge-new {
     background: var(--accent);
-    color: white;
+    color: #18181a;
     font-size: 0.6rem;
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
