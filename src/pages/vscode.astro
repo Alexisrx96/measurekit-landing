@@ -10,9 +10,9 @@ import DocsLayout from "../layouts/DocsLayout.astro";
   </div>
 
   <div class="callout callout-info" style="display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; padding: 1.25rem; border-left: 4px solid var(--accent); border-radius: var(--radius-sm);">
-    <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Manual Installation Pack:</strong></p>
+    <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Now on the VS Code Marketplace:</strong></p>
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <a href="/vsc-physure-0.2.1.vsix" download class="btn-primary" style="margin: 0;">Download vsc-physure-0.2.1.vsix</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=irvintorres.vsc-physure" class="btn-primary" style="margin: 0;">Install from Marketplace</a>
       <span style="color: var(--text-muted); font-size: 0.9rem;">(Compatible with VS Code 1.93.0+)</span>
     </div>
   </div>
@@ -47,7 +47,15 @@ import DocsLayout from "../layouts/DocsLayout.astro";
 
   <h2>Installation Methods</h2>
 
-  <h3>1. VSIX Manual Installation (Recommended)</h3>
+  <h3>1. VS Code Marketplace (Recommended)</h3>
+  <ol>
+    <li>Open the Extensions view (<code>Ctrl+Shift+X</code> or <code>Cmd+Shift+X</code>) in VS Code or Cursor.</li>
+    <li>Search for <strong>Physure</strong> and click <strong>Install</strong>.</li>
+  </ol>
+  <p>Or install it from the command line:</p>
+  <pre><code>code --install-extension irvintorres.vsc-physure</code></pre>
+
+  <h3>2. VSIX Manual Installation (VSCodium / offline)</h3>
   <ol>
     <li>Download the <a href="/vsc-physure-0.2.1.vsix" download>vsc-physure-0.2.1.vsix</a> extension package.</li>
     <li>In VS Code or Cursor, open the Command Palette (<code>Ctrl+Shift+P</code> or <code>Cmd+Shift+P</code>).</li>
@@ -56,7 +64,7 @@ import DocsLayout from "../layouts/DocsLayout.astro";
     <li>Reload the editor window if prompted.</li>
   </ol>
 
-  <h3>2. Developer Symbolic Link (Local Link)</h3>
+  <h3>3. Developer Symbolic Link (Local Link)</h3>
   <p>If you have cloned the extension repository, you can symlink it directly to your editor's extension folder:</p>
   
   <div class="tabs">

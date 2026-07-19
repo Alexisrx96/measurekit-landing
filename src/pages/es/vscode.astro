@@ -10,9 +10,9 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
   </div>
 
   <div class="callout callout-info" style="display: flex; flex-direction: column; gap: 0.75rem; margin: 1.5rem 0; padding: 1.25rem; border-left: 4px solid var(--accent); border-radius: var(--radius-sm);">
-    <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Paquete de Instalación Manual:</strong></p>
+    <p style="margin: 0; font-size: 1rem; line-height: 1.5;"><strong>Ya disponible en el Marketplace de VS Code:</strong></p>
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-      <a href="/vsc-physure-0.2.1.vsix" download class="btn-primary" style="margin: 0;">Descargar vsc-physure-0.2.1.vsix</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=irvintorres.vsc-physure" class="btn-primary" style="margin: 0;">Instalar desde el Marketplace</a>
       <span style="color: var(--text-muted); font-size: 0.9rem;">(Compatible con VS Code 1.93.0+)</span>
     </div>
   </div>
@@ -47,7 +47,15 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
 
   <h2>Métodos de Instalación</h2>
 
-  <h3>1. Instalación Manual por VSIX (Recomendado)</h3>
+  <h3>1. Marketplace de VS Code (Recomendado)</h3>
+  <ol>
+    <li>Abre la vista de Extensiones (<code>Ctrl+Shift+X</code> o <code>Cmd+Shift+X</code>) en VS Code o Cursor.</li>
+    <li>Busca <strong>Physure</strong> y haz clic en <strong>Instalar</strong>.</li>
+  </ol>
+  <p>O instálala desde la línea de comandos:</p>
+  <pre><code>code --install-extension irvintorres.vsc-physure</code></pre>
+
+  <h3>2. Instalación Manual por VSIX (VSCodium / sin conexión)</h3>
   <ol>
     <li>Descarga el archivo del paquete <a href="/vsc-physure-0.2.1.vsix" download>vsc-physure-0.2.1.vsix</a>.</li>
     <li>En VS Code o Cursor, abre la paleta de comandos (<code>Ctrl+Shift+P</code> o <code>Cmd+Shift+P</code>).</li>
@@ -56,7 +64,7 @@ import DocsLayout from "../../layouts/DocsLayout.astro";
     <li>Reinicia o recarga la ventana del editor si se solicita.</li>
   </ol>
 
-  <h3>2. Enlace Simbólico de Desarrollo (Instalación Local)</h3>
+  <h3>3. Enlace Simbólico de Desarrollo (Instalación Local)</h3>
   <p>Si has clonado el repositorio de la extensión, puedes enlazarlo directamente con la carpeta de extensiones de tu editor:</p>
   
   <div class="tabs">
